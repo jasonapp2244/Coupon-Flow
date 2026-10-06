@@ -1,0 +1,108 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Bricolage Grotesque', 'Instrument Sans', ui-sans-serif, sans-serif;
+
+  --color-ink: #1B2430;
+  --color-ink-soft: #4A5566;
+  /* Darkened from #6B7685 so small grey text passes WCAG AA (4.5:1) on paper and white. */
+  --color-muted: #5B6572;
+  --color-paper: #F5F6F8;
+  --color-card: #FFFFFF;
+  --color-line: #E3E6EB;
+  --color-marigold: #FFCB3D;
+  --color-marigold-soft: #FFF4D1;
+  --color-deal: #0F7B64;
+  --color-deal-dark: #0B5E4C;
+  --color-deal-soft: #E3F3EF;
+  --color-raspberry: #C42D4B;
+}
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-deal px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-deal-dark disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-card px-4 py-2 text-sm font-semibold text-ink ring-1 ring-line transition-colors hover:bg-paper disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .field {
+    @apply w-full rounded-lg bg-card px-3.5 py-2.5 text-base text-ink ring-1 ring-line placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-deal;
+  }
+  .field-label {
+    @apply mb-1.5 block text-sm font-semibold text-ink;
+  }
+  .page {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6;
+  }
+  .page-title {
+    @apply font-display text-4xl font-extrabold tracking-tight sm:text-5xl;
+  }
+  .section-title {
+    @apply font-display text-2xl font-extrabold tracking-tight sm:text-3xl;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full bg-card px-3.5 py-1.5 text-sm font-semibold text-ink-soft ring-1 ring-line transition-colors hover:text-ink hover:ring-ink;
+  }
+  .chip-active {
+    @apply bg-ink text-white ring-ink hover:text-white;
+  }
+  .prose-body p {
+    @apply mt-4 leading-relaxed text-ink-soft;
+  }
+  .prose-body h2 {
+    @apply mt-8 font-display text-2xl font-bold text-ink;
+  }
+  .prose-body h3 {
+    @apply mt-6 font-display text-xl font-semibold text-ink;
+  }
+  .prose-body ul {
+    @apply mt-4 list-disc space-y-1.5 pl-6 text-ink-soft;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-deal);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* The perforation between a coupon's stub and body: a dashed tear line with two punched notches. */
+.perforation {
+  position: relative;
+  border-left: 2px dashed var(--color-line);
+}
+.perforation::before,
+.perforation::after {
+  content: '';
+  position: absolute;
+  left: -9px;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  /* The notches show whatever is behind the ticket; sections on another colour set --notch. */
+  background: var(--notch, var(--color-paper));
+}
+.perforation::before { top: -9px; }
+.perforation::after { bottom: -9px; }
+
+/* Horizontal variant, used when the ticket stacks on small screens. */
+@media (max-width: 639px) {
+  .perforation { border-left: 0; border-top: 2px dashed var(--color-line); }
+  .perforation::before, .perforation::after { top: -9px; bottom: auto; }
+  .perforation::before { left: -9px; }
+  .perforation::after { left: auto; right: -9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

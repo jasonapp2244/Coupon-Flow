@@ -1,0 +1,27 @@
+# Coupon Follow Admin — Apache config for SiteGround (copied into dist/ by Vite).
+# Works from the domain root or any subfolder: rules are relative to this directory.
+
+Options -Indexes
+
+# Hash routing (#/stores) needs no rewrites. A missing file therefore returns a real 404 instead of
+# index.html, so a stale tab after a redeploy shows the "reload" screen rather than a blank page.
+
+# Admin panel must never be indexed, even if robots.txt is ignored.
+<IfModule mod_headers.c>
+  Header always set X-Robots-Tag "noindex, nofollow"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+  # Hashed build assets (assets/) never change -> cache for a year; everything else revalidates.
+  <If "%{REQUEST_URI} =~ m#/assets/#">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </If>
+  <Else>
+    Header set Cache-Control "no-cache"
+  </Else>
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript text/javascript application/json image/svg+xml text/plain
+</IfModule>

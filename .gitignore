@@ -1,0 +1,8 @@
+# Each app has its own .gitignore; these cover the repo root and gaps between them.
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+node_modules/
+.DS_Store
+Thumbs.db

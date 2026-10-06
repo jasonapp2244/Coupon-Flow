@@ -1,0 +1,66 @@
+# Coupon Follow public site: Apache config for SiteGround (copied into dist/ by Vite).
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Always HTTPS (SiteGround passes the original scheme in X-Forwarded-Proto).
+  RewriteCond %{HTTPS} off
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # A missing build file must be a real 404, not the app shell (stale tabs after a redeploy).
+  RewriteRule ^assets/ - [L]
+
+  # Pre-rendered pages are only reachable at their clean URLs (no duplicate /_prerender/... copies).
+  # THE_REQUEST is the original request line, so the internal rewrite below isn't caught by this.
+  RewriteCond %{THE_REQUEST} \s/_prerender/ [NC]
+  RewriteRule ^ - [R=404,L]
+
+  # Pages built by scripts/prerender.mjs (full content and meta tags for search engines and link
+  # previews; the app takes over on load). The home page is _prerender/index.html ...
+  RewriteCond %{DOCUMENT_ROOT}/_prerender/index.html -f
+  RewriteRule ^$ _prerender/index.html [L]
+
+  # Store share links (/promotions/at/nike) serve the same snapshot as /stores/nike; its canonical
+  # tag points at /stores/nike, so search engines don't index two copies.
+  RewriteCond %{DOCUMENT_ROOT}/_prerender/stores/$1.html -f
+  RewriteRule ^promotions/at/([^/]+)/?$ _prerender/stores/$1.html [L]
+
+  # ... and every other page is _prerender{path}.html: /stores/nike -> _prerender/stores/nike.html.
+  # The list pages are built without filters, so /stores?letter=B, /coupons?kind=paid, /blog?page=2
+  # etc. go to the app instead.
+  RewriteCond %{QUERY_STRING} ^$ [OR]
+  RewriteCond %{REQUEST_URI} !^/(stores|coupons|blog)$
+  RewriteCond %{DOCUMENT_ROOT}/_prerender%{REQUEST_URI}.html -f
+  RewriteRule ^ _prerender%{REQUEST_URI}.html [L]
+
+  # Single-page app: any other path that isn't a real file is served by index.html (e.g. /stores/nike).
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header always set Strict-Transport-Security "max-age=31536000" env=HTTPS
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+
+  # Hashed build files (assets/) never change: cache for a year. Everything else
+  # (index.html, favicon, sitemap, share image) revalidates so updates show up at once.
+  <If "%{REQUEST_URI} =~ m#^/assets/#">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </If>
+  <Else>
+    Header set Cache-Control "no-cache"
+  </Else>
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript text/javascript application/json application/manifest+json image/svg+xml text/plain application/xml
+</IfModule>
+
+AddType application/manifest+json .webmanifest

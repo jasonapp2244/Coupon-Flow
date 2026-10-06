@@ -1,0 +1,14 @@
+{
+  "title": "Coupon Follow Admin",
+  "description": "Coupon Follow admin dashboard for managing stores, coupons, blogs, vendor sync and redemptions.",
+  "icons": {
+    "icon": "./favicon.svg"
+  },
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
