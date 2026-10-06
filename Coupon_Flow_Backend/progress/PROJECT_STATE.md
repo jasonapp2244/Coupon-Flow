@@ -1,6 +1,10 @@
 # Project State — Coupon Follow
 
-_Last updated: 2026-10-06_
+_Last updated: 2026-10-07_
+
+**Repository:** one git repo at `F:\React_project` (backend, admin and website as subfolders, root `README.md` +
+`.gitignore`), pushed to https://github.com/jasonapp2244/Coupon-Flow (branch `main`, first commit `976466f`,
+2026-10-07). No `.env`, `vendor`, `node_modules` or `dist` in it.
 
 ## Overall roadmap
 | Phase | Scope | Status |
