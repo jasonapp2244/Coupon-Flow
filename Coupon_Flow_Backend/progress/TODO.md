@@ -37,6 +37,6 @@
 - [x] Store star rating like the reference site (2026-10-05).
 - [x] Simple coupon site: "Sell Exclusive Codes" switch (default off), one row layout everywhere, `#coupon_code-{id}` pop-up (2026-10-05).
 - [x] Website cart removed (2026-10-15); admin switch gone.
-- [ ] Website leftover: `currency` in `src/lib/types.ts` SiteSettings and `src/store/site.tsx` FALLBACK (the edit was blocked by the permission classifier; harmless, delete both lines together).
+- [x] Website leftover: `currency` removed from `src/lib/types.ts` SiteSettings and `src/store/site.tsx` FALLBACK (2026-10-15).
 - [x] Admin view/reset of store ratings: list column + sort, drawer row, edit-page card with remove-one and reset (2026-10-05).
 - [x] `/promotions/at/{slug}` alias like the reference site, canonical to `/stores/{slug}`; admin share links use it (2026-10-03).

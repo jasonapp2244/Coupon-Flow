@@ -7,7 +7,6 @@ import type { SiteSettings } from '../lib/types';
 const FALLBACK: SiteSettings = {
   site_name: 'Coupon Follow',
   support_email: '',
-  currency: 'usd',
   meta_title: '',
   meta_description: 'Find working coupon codes and deals for the stores you already shop, updated every day.',
   meta_keywords: '',

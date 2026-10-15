@@ -101,7 +101,6 @@ export interface Blog {
 export interface SiteSettings {
   site_name: string;
   support_email: string;
-  currency: string;
   meta_title: string;
   meta_description: string;
   meta_keywords: string;
