@@ -92,6 +92,8 @@ export interface Blog {
   /** Only on a single post; lists leave it out. */
   body?: string | null;
   featured_image_url: string | null;
+  /** Picked by the admin to lead the blog page. */
+  is_featured?: boolean;
   meta_title: string | null;
   meta_description: string | null;
   published_at: string | null;
@@ -106,6 +108,25 @@ export interface SiteSettings {
   meta_keywords: string;
   /** The store's timezone: deal start and end times are shown in it. */
   timezone: string;
+  /** Home page hero, edited by the admin under Settings → Homepage. */
+  homepage: HomepageHero;
+}
+
+export interface HeroSlide {
+  image_url: string | null;
+  title: string;
+  subtitle: string | null;
+  button_text: string | null;
+  /** A page on this site ("/stores/nike") or a full web address. */
+  link: string | null;
+}
+
+export interface HomepageHero {
+  headline: string;
+  subtext: string;
+  search_placeholder: string;
+  hero_image_url: string | null;
+  slides: HeroSlide[];
 }
 
 export interface SearchResults {

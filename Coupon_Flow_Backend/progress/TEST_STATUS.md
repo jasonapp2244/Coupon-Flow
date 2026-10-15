@@ -1,8 +1,25 @@
 # Test Status
 
-_Last run: 2026-10-15_
+_Last run: 2026-10-16_
 
 ## Backend
+Website copy pass (2026-10-16):
+- `php artisan test`: **125 passed (828 assertions)**. HomepageSettingsTest now expects the new default headline.
+- pint passed. Website tsc clean.
+- Build OK: sitemap 28 URLs; pre-render 6 store pages, because the 2 test stores are now hidden.
+- Headless Chrome at 1440 and 390 px over 17 pages (home, coupons, stores, 2 store pages, categories, 2 category pages, blog, article, 5 static pages, the hidden demo store, a 404): no console errors, no overflow, no leftover markup or placeholder text ("Terms apply", "Travil", "Demo", example.com, "**", "##"). The full text dump was proofread, and duplicated blog tab titles were found and fixed.
+
+Blog articles + editor (2026-10-16): no backend code changed. Admin + website tsc clean; website build OK (30 URLs, 4 article pages pre-rendered with the new text). Headless Chrome: admin blog edit → Ctrl+B and the Heading button format a line, two undos restore it, Preview shows headings/lists/quote; site article at 1440/390 px renders 5 h2, 4 h3, numbered + bullet lists, a tip box, bold text, no raw markup; an in-article link opens /stores/amazon; no console errors or overflow.
+
+Editable hero (2026-10-16): `php artisan test` -> **125 passed (828 assertions)** (new `HomepageSettingsTest` 5; AccountSecurityTest now checks `meta.currency` absent since settings gained `meta.homepage_image_urls`); pint passed; `route:list --path=settings` shows the upload route. Admin + website tsc clean; website build + pre-render OK. Headless Chrome: admin login → Settings → Homepage, uploaded background + 2 slides, saved; site shows new headline/placeholder, background, slider autoplay 0→1, Next works, slide button → /stores/sephora; 1440/390 px, no console errors or overflow.
+
+Blog redesign (2026-10-16): website tsc clean; full build OK (sitemap 30 URLs, 4 article pages pre-rendered). Headless Chrome 1440/390 px: /blog, /blog?category=deals, an article; no console errors, no overflow; header "Blog" link opens /blog.
+
+Website UI upgrade (2026-10-16, no backend code changes): `php artisan test` -> **120 passed (771 assertions)**.
+Website `tsc` clean; `pnpm build` (tsc + vite + SSR + sitemap 30 URLs + pre-render 30 pages) OK. Headless Chrome at
+1440 px and 390 px: home, coupons, stores, categories, a category, a store, blog, about, 404 and the code pop-up —
+no console errors, no horizontal overflow, "Show coupon code" opens the store tab and the pop-up shows the copy button.
+
 `php artisan test` (2026-10-15, code lists + profit) -> **120 passed (771 assertions)**; pint passed; new suite
 `CodeListAndProfitTest` (10). Admin + website tsc clean. Headless Chrome on the dev servers: visitor A code 1, refresh
 same code, Get another code -> code 2, third try -> limit message; visitor B (other browser) code 3; coupon then hidden;

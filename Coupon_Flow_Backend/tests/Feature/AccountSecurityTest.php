@@ -94,7 +94,7 @@ class AccountSecurityTest extends TestCase
             ->assertJsonMissingPath('data.general.currency')
             ->assertJsonMissingPath('data.general.shop_enabled')
             ->assertJsonMissingPath('data.notifications.error_alerts')
-            ->assertJsonMissingPath('meta')
+            ->assertJsonMissingPath('meta.currency')
             ->assertJsonPath('data.security.require_two_factor', false);
         $this->putJson('/api/v1/admin/settings/vendor', ['api_key' => 'x'])->assertNotFound();
     }

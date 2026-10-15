@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import CouponTicket from '../components/CouponTicket';
-import { EmptyState, ErrorState, Pager, Spinner } from '../components/States';
+import { EmptyState, ErrorState, PageHeader, Pager, TicketSkeletons } from '../components/States';
 import { withQuery } from '../lib/api';
 import { useApi, useDebounced, usePageMeta } from '../lib/hooks';
 import { pageParam } from '../lib/format';
@@ -43,7 +43,7 @@ export default function CouponsPage() {
   }, [debounced]);
 
   const heading = q ? `Coupons for “${q}”` : 'All coupons';
-  usePageMeta(heading, 'Browse working coupon codes and deals. Click to reveal the code and shop at the store.');
+  usePageMeta(heading, 'Browse the latest promo codes and deals from top stores. Reveal a code, shop in a new tab and save at checkout.');
 
   const categories = useApi<{ data: Category[] }>('/public/categories?type=store');
   const { data, loading, error, reload } = useApi<Paginated<Coupon>>(withQuery('/public/coupons', {
@@ -55,47 +55,47 @@ export default function CouponsPage() {
   const filtered = q || category || verified || order;
 
   return (
-    <div className="page py-10">
-      <h1 className="page-title">{heading}</h1>
-      <p className="mt-2 text-ink-soft" aria-live="polite">{data ? `${data.meta.total} live ${data.meta.total === 1 ? 'coupon' : 'coupons'}` : 'Loading coupons'}</p>
-
-      <div className="mt-6 flex flex-col gap-4 rounded-xl bg-card p-4 ring-1 ring-line">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          <input value={text} onChange={e => setText(e.target.value)} placeholder="Search by store or offer" aria-label="Search coupons" className="field lg:max-w-sm" />
-          <select value={category} onChange={e => update({ category: e.target.value })} aria-label="Category" className="field lg:w-52">
-            <option value="">All categories</option>
-            {categories.data?.data.map(c => <option key={c.id} value={c.slug}>{c.name}</option>)}
-          </select>
-          <select value={order} onChange={e => update({ order: e.target.value })} aria-label="Sort by" className="field lg:ml-auto lg:w-52">
-            {ORDERS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
+    <>
+      <PageHeader title={heading} intro={<span aria-live="polite">{data ? `${data.meta.total.toLocaleString('en-US')} live ${data.meta.total === 1 ? 'coupon' : 'coupons'} and deals. Click one to open the store and see the code.` : 'Loading coupons'}</span>} />
+      <div className="page py-8">
+        <div className="sticky top-16 z-20 -mx-4 flex flex-col gap-3 border-b border-line bg-paper/95 px-4 py-4 backdrop-blur sm:mx-0 sm:rounded-2xl sm:border-0 sm:bg-card sm:p-4 sm:shadow-[0_8px_24px_-16px_rgb(27_36_48/0.35)] sm:ring-1 sm:ring-line">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <input value={text} onChange={e => setText(e.target.value)} placeholder="Search by store or offer" aria-label="Search coupons" className="field lg:max-w-sm" />
+            <select value={category} onChange={e => update({ category: e.target.value })} aria-label="Category" className="field lg:w-52">
+              <option value="">All categories</option>
+              {categories.data?.data.map(c => <option key={c.id} value={c.slug}>{c.name}</option>)}
+            </select>
+            <select value={order} onChange={e => update({ order: e.target.value })} aria-label="Sort by" className="field lg:ml-auto lg:w-52">
+              {ORDERS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className={`chip cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-deal ${verified ? 'chip-active' : ''}`}>
+              <input type="checkbox" checked={verified} onChange={e => update({ verified: e.target.checked ? '1' : '' })} className="sr-only" />
+              Verified only
+            </label>
+            {filtered && (
+              <button className="ml-auto text-sm font-semibold text-deal hover:underline" onClick={() => { setText(''); setParams(new URLSearchParams(), { replace: true }); }}>
+                Clear filters
+              </button>
+            )}
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <label className={`chip cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-deal ${verified ? 'chip-active' : ''}`}>
-            <input type="checkbox" checked={verified} onChange={e => update({ verified: e.target.checked ? '1' : '' })} className="sr-only" />
-            Verified only
-          </label>
-          {filtered && (
-            <button className="ml-auto text-sm font-semibold text-deal hover:underline" onClick={() => { setText(''); setParams(new URLSearchParams(), { replace: true }); }}>
-              Clear filters
-            </button>
+
+        <section className="mt-8" aria-label="Coupons">
+          {error && <ErrorState message={error} onRetry={reload} />}
+          {loading && !data && <TicketSkeletons count={4} />}
+          {data && coupons.length === 0 && (
+            <EmptyState title="No coupons match that search">
+              Try a store name instead, or <button className="font-semibold text-deal underline" onClick={() => { setText(''); setParams(new URLSearchParams(), { replace: true }); }}>clear the filters</button>.
+            </EmptyState>
           )}
-        </div>
+          <div className={`flex flex-col gap-4 ${loading ? 'opacity-60' : ''}`}>
+            {coupons.map(c => <CouponTicket key={c.id} coupon={c} />)}
+          </div>
+          <Pager meta={data?.meta ?? null} onPage={p => { update({ page: String(p) }); window.scrollTo(0, 0); }} />
+        </section>
       </div>
-
-      <section className="mt-8" aria-label="Coupons">
-        {error && <ErrorState message={error} onRetry={reload} />}
-        {loading && !data && <Spinner />}
-        {data && coupons.length === 0 && (
-          <EmptyState title="No coupons match that search">
-            Try a store name, or <button className="font-semibold text-deal underline" onClick={() => { setText(''); setParams(new URLSearchParams(), { replace: true }); }}>clear the filters</button>.
-          </EmptyState>
-        )}
-        <div className={`flex flex-col gap-4 ${loading ? 'opacity-60' : ''}`}>
-          {coupons.map(c => <CouponTicket key={c.id} coupon={c} />)}
-        </div>
-        <Pager meta={data?.meta ?? null} onPage={p => { update({ page: String(p) }); window.scrollTo(0, 0); }} />
-      </section>
-    </div>
+    </>
   );
 }

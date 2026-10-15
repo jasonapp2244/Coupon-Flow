@@ -20,7 +20,7 @@ function Stars({ value, size = 20 }: { value: number; size?: number }) {
   return (
     <span className="relative inline-flex" aria-hidden="true">
       <span className="flex text-line">{[1, 2, 3, 4, 5].map(i => <Star key={i} size={size} fill="currentColor" strokeWidth={0} />)}</span>
-      <span className="absolute inset-0 flex overflow-hidden text-marigold" style={{ width: `${(value / 5) * 100}%` }}>
+      <span className="absolute inset-0 flex overflow-hidden text-marigold-deep" style={{ width: `${(value / 5) * 100}%` }}>
         {[1, 2, 3, 4, 5].map(i => <Star key={i} size={size} fill="currentColor" strokeWidth={0} className="shrink-0" />)}
       </span>
     </span>
@@ -61,8 +61,8 @@ export default function StoreRating({ slug, name, initial }: { slug: string; nam
   const shown = hover || mine || 0;
 
   return (
-    <div className="rounded-xl bg-card p-5 text-center ring-1 ring-line">
-      <h2 id="rate-heading" className="font-semibold">Rate {name}</h2>
+    <div className="panel p-5 text-center">
+      <h2 id="rate-heading" className="font-display text-xl font-extrabold">Rate {name}</h2>
       <div role="group" aria-labelledby="rate-heading" className="mt-3 flex justify-center gap-1" onMouseLeave={() => setHover(0)}>
         {[1, 2, 3, 4, 5].map(i => (
           <button
@@ -75,7 +75,7 @@ export default function StoreRating({ slug, name, initial }: { slug: string; nam
             onFocus={() => setHover(i)}
             onBlur={() => setHover(0)}
             onClick={() => rate(i)}
-            className={`rounded p-0.5 transition-transform hover:scale-110 disabled:cursor-wait ${i <= shown ? 'text-ink' : 'text-line'}`}
+            className={`rounded p-0.5 transition-transform hover:scale-110 disabled:cursor-wait ${i <= shown ? 'text-marigold-deep' : 'text-line'}`}
           >
             <Star size={26} fill="currentColor" strokeWidth={0} />
           </button>

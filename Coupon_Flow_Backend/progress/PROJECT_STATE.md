@@ -1,6 +1,6 @@
 # Project State — Coupon Follow
 
-_Last updated: 2026-10-15_
+_Last updated: 2026-10-16_
 
 **Repository:** one git repo at `F:\React_project` (backend, admin and website as subfolders, root `README.md` +
 `.gitignore`), pushed to https://github.com/jasonapp2244/Coupon-Flow (branch `main`, first commit `976466f`,
@@ -15,6 +15,66 @@ _Last updated: 2026-10-15_
 | 3 | Public website (`../Coupon_Flow_Website`) | ✅ Done — see below |
 | 4 | Payments go-live (Stripe) | ❌ Removed 2026-10-15 at the user's request (see below); no payments at all |
 | 5 | Audit fixes, public site redesign, full test, SiteGround deploy | 🟡 Code, tests and release packaging done; live upload waits on user inputs (see TODO) |
+
+## Follow-up — full website copy pass (2026-10-16)
+Client: all website content written like a professional human copywriter.
+- **Database, through the admin API:**
+  - 8 stores: intro, an About section (how to use a code, ways to save, a tip), and SEO fields.
+  - 10 coupons: sentence-case titles with real descriptions; no more "… Terms apply.".
+  - Descriptions for all 13 categories, and "Travil" renamed to "Travel" (slug `travel`).
+  - The `seo` settings group is filled; home hero and slide copy tightened.
+  - Blog SEO titles no longer repeat the site name.
+  - Test stores "Demo Code List Store" and "The Loaded Tea Shop" set to **Inactive** (hidden, not deleted).
+- **Website copy:**
+  - `StaticPages.tsx` rewritten: About, Contact, Terms, Privacy (matches what is really stored: offer clicks, a one-way visitor code, ratings, emails, server logs, session and local storage) and Affiliate disclosure. Dated October 16, 2026.
+  - Home sections, footer and empty/error states reworded.
+  - Claims we can't promise removed ("checked this week", "updated every day", reply times).
+  - "No code required" in sentence case; the store sidebar reads "Similar stores"; singular "1 store".
+  - 5xx errors show a friendly message.
+  - `index.html`, the site.tsx fallback and `SiteSettings::DEFAULTS` share the same headline and description.
+- **DemoSeeder:** uses the new coupon copy, and creates blogs with `firstOrCreate` so a re-seed can't overwrite written articles.
+
+## Follow-up — blog articles + article editor (2026-10-16)
+- All 5 posts now have full articles (about 460 to 720 words), a short description and SEO title/description/keywords,
+  saved through the admin API. The Nike post is still a Draft. Content is evergreen shopping advice with no invented prices.
+- Admin blog editor: `src/components/ArticleEditor.tsx` has a formatting toolbar (heading, sub-heading, bold, italic,
+  link, bullet list, numbered list, quote/tip), shortcuts Ctrl+B/I/K, undo-safe edits, Write/Preview tabs with a
+  site-like preview, and a word count with reading time. The short description shows a 300-character guide.
+- Formatting is plain text (no HTML stored or rendered): `##`/`###` headings, `- ` bullets, `1. ` steps, `> ` tip,
+  `**bold**`, `*italic*`, `[text](/path or https://)`. Website `src/components/RichText.tsx` renders the same rules; links to site pages go
+  through the router and external links open in a new tab; any other link target stays plain text.
+
+## Follow-up — editable home hero (2026-10-16)
+Client: hero editable, with images. Admin → Settings → **Homepage** (admin only): headline, sub-text, search placeholder,
+background image, up to 3 banner slides (image, title, sub-title, button text, link).
+- Settings group `homepage` (`SiteSettings::DEFAULTS`); images on the public disk under `homepage/`, uploaded by
+  `POST admin/settings/homepage/images` (jpg/png/webp, 4 MB) and referenced by path when the group is saved; paths must
+  exist under `homepage/`; links are `/path` or http(s) only. Replaced/removed images are deleted on save. Activity log
+  shows slides as a count and the image as set/none. `GET admin/settings` has `meta.homepage_image_urls` for previews.
+- Public settings: `homepage` with `hero_image_url` and slide `image_url` (no disk paths).
+- Website: background photo under a dark gradient; `HeroSlider` (6 s autoplay, pauses on hover/focus, none with reduced
+  motion, arrows + dots, internal links via router, external in new tab); ticket pile when there are no slides; store
+  logos in Popular chips and at `sm` size on coupon rows.
+- Local content photos (free Unsplash License, set through the admin API): hero background (shopper with bags), slides Beauty week at Sephora / Tech deals / Fashion finds (→ /categories/fashion), and featured images on all 4 blog posts. Swap for the client's own photos in the admin any time.
+
+## Follow-up — website UI upgrade (2026-10-16)
+Client: website "more advanced, more attractive, fully professional". User picked: evolve the current coupon-ticket
+brand; store page keeps its healthinfolife structure. Presentation only: no API, route, SEO or click-out changes.
+Plan: `~/.claude/plans/client-rquiremnt-wesite-side-witty-llama.md`.
+- `index.css`: tokens `ink-deep`, `marigold-deep`; `.band-dark` (dot-grid dark band), `.panel`, `.badge`,
+  `.btn-marigold`, `.chip-dark`, `.skeleton`, `.stub-edge` (serrated stub), `.perforation-stack` (mobile tear line,
+  now opt-in), `.perforation-h` (pop-up); keyframes `settle` (hero tickets) and `tear` (pop-up).
+- `CouponTicket`: tear-off stub with the offer figure (`TicketStub`, marigold = code, green = deal), Verified /
+  Exclusive badges, "Show coupon code" button with a dashed code "peel".
+- Home: dark hero with three real featured tickets dropping in, stats strip (totals from `meta.total` of
+  `public/coupons?per_page=1` / `public/stores?per_page=1`), category tiles with icons (`lib/categoryIcon.tsx`,
+  keyword → lucide icon), top-store logo wall, how-it-works cards, closing search band.
+- Shared `PageHeader`, ticket/card skeletons, new Empty/Error/404; header with marigold active tab + category
+  mega-menu; dark footer; mobile menu sheet; store page banner (logo, offers/codes/verified/rating chips, sticky
+  sidebar); code pop-up as a ticket with a "Copied" state.
+- `stubFigure`: a dollar amount counts only when "off" follows it ("Free Shipping Over $20" → Free shipping).
+- `index.html` meta description no longer mentions buying codes by card.
+- Blog redesign (same day, client: blog page "not showing" = the menu said Guides): menu label back to **Blog**; list page with topic chips (icons), search, lead story (admin `is_featured` pick, else newest) + Latest articles grid, closing code search; posts without a photo get a generated cover (`BlogCover`: topic colour + icon + ticket shapes); article page with centred header (topic, author, date, reading time), wide cover, sticky sidebar (Find a code, Keep reading), share buttons (copy link, X, Facebook), More guides. `categoryIcon` also knows deals/tips/e-commerce/retail.
 
 ## Follow-up — code lists + commission profit (2026-10-15)
 Plan: `~/.claude/plans/i-want-to-vistoer-shiny-teacup.md`. Client: each click gets the next code of a list; a visitor

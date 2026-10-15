@@ -1,6 +1,11 @@
 # TODO
 
 ## Blocked on user
+- [ ] Client to review the 5 blog articles (edit in Admin → Blogs); publish the Nike draft when ready.
+- [ ] Client to review the site copy (store About texts, coupon wording, legal pages; the legal pages are not legal advice).
+- [ ] Set a support email in Admin → Settings → General: Contact currently says details are "being set up".
+- [ ] Rename the admin user's display name (shown as "Admin" on blog bylines), e.g. to "Coupon Follow Team", in My Account.
+- [ ] Live server: DB content (stores, coupons, categories, blogs, settings) is local only; re-enter it or copy the DB.
 - [x] Test key in `STRIPE_SECRET` (user's own test account).
 - [x] `STRIPE_WEBHOOK_SECRET` from `stripe listen` in `.env` (restart the listener for local webhooks; same secret per key/device).
 - [ ] Roll (or delete) the Stripe test key that was pasted into chat. Stripe is no longer used (2026-10-15); `STRIPE_*` lines in the local `.env` can be deleted.
@@ -21,6 +26,11 @@
 - [ ] Live upload and go-live checklist in `deploy/DEPLOY.md` (needs the inputs above + explicit go-ahead).
 
 ## Later
+- [x] Editable home hero: text, background image, up to 3 slides (Admin → Settings → Homepage) (2026-10-16).
+- [x] Content-related photos for the hero, 3 slides and 4 blog posts (Unsplash, free license) (2026-10-16).
+- [ ] Real store logos (stores still show initials); on the live server, upload the same or the client's photos (local storage files are not in git).
+- [x] Website UI upgrade: ticket stubs, dark hero with ticket pile, stats strip, category icons, skeletons, new header/footer, ticket-style code pop-up (2026-10-16).
+- [ ] Client review of the new website look; real store logos and blog images make it read much better than the initials placeholders.
 - [x] Code lists (next code per click, several per visitor, daily limit) + commission % + Confirm sale profit (2026-10-15).
 - [ ] Import affiliate-network sales reports (CSV/API) to confirm sales automatically; needs the network and its format.
 - [x] Delete the unused website shop files listed in PROJECT_STATE (2026-10-15 follow-up), then trim `lib/api.ts` token code and `Order*` types.

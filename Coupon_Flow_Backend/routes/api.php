@@ -120,6 +120,7 @@ Route::prefix('v1')->group(function () {
         // ── Admin only: settings, permanent deletes, staff ──
         Route::middleware('role:admin')->group(function () {
             Route::put('settings/{group}', [Admin\SettingsController::class, 'update']);
+            Route::post('settings/homepage/images', [Admin\SettingsController::class, 'uploadHomepageImage']);
             Route::delete('trash', [Admin\TrashController::class, 'empty']);
             Route::delete('trash/{type}/{id}', [Admin\TrashController::class, 'destroy'])->whereNumber('id');
 

@@ -39,6 +39,7 @@ class PublicCatalogController extends Controller
             // Deal windows are shown in the store's time ("Ends Oct 25, 11:59 PM EDT").
             'timezone' => $settings->timezone(),
             ...$settings->group('seo'),
+            'homepage' => $settings->publicHomepage(),
         ]]);
     }
 

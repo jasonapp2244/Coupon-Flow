@@ -32,12 +32,14 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   try {
     response = await fetch(API_BASE_URL + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
   } catch {
-    throw new ApiError(0, "Can't reach Coupon Follow right now. Check your connection and try again.");
+    throw new ApiError(0, "We couldn't connect. Check your internet connection and try again.");
   }
 
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
-    throw new ApiError(response.status, data.message || `Request failed (${response.status})`);
+    throw new ApiError(response.status, response.status >= 500 || !data.message
+      ? 'Something went wrong on our side. Please try again in a moment.'
+      : data.message);
   }
 
   if (response.status === 204) return undefined as T;

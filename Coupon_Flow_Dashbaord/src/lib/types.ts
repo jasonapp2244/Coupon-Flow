@@ -362,4 +362,22 @@ export interface Settings {
   seo: { meta_title: string; meta_description: string; meta_keywords: string };
   notifications: { email: boolean; sync_alerts: boolean; redemption_alerts: boolean };
   security: { require_two_factor: boolean };
+  homepage: HomepageSettings;
+}
+
+/** One banner on the public home page hero. image is a public-disk path from the homepage image upload. */
+export interface HomepageSlide {
+  image: string;
+  title: string;
+  subtitle: string | null;
+  button_text: string | null;
+  link: string | null;
+}
+
+export interface HomepageSettings {
+  headline: string;
+  subtext: string;
+  search_placeholder: string;
+  hero_image: string | null;
+  slides: HomepageSlide[];
 }

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Navigate, useParams } from 'react-router';
+import { ArrowDown, ArrowUp, Image as ImageIcon, Plus, Trash2, Upload } from 'lucide-react';
 import { Card, Input, Select, Textarea, Toggle, Button, PageHeader } from '../components/ui';
 import { FieldError, FormLoadState } from '../components/FormParts';
 import { api, ApiError } from '../lib/api';
@@ -7,10 +8,10 @@ import { useApi } from '../lib/hooks';
 import { useApp, useCan } from '../store/AppContext';
 import { TwoFactorSetup } from '../components/TwoFactorSetup';
 import { ROLE_LABELS } from '../lib/permissions';
-import type { Settings, StaffRole, User } from '../lib/types';
+import type { HomepageSlide, Settings, StaffRole, User } from '../lib/types';
 
-type Section = 'general' | 'seo' | 'notifications' | 'security' | 'account';
-const SECTIONS: Section[] = ['general', 'seo', 'notifications', 'security', 'account'];
+type Section = 'general' | 'homepage' | 'seo' | 'notifications' | 'security' | 'account';
+const SECTIONS: Section[] = ['general', 'homepage', 'seo', 'notifications', 'security', 'account'];
 
 const cardTitle = 'text-sm font-semibold text-slate-800 mb-4 pb-3 border-b border-slate-100';
 
@@ -93,6 +94,155 @@ function SeoSettings({ initial }: { initial: Settings['seo'] }) {
         <Button size="sm" onClick={() => save(values, 'SEO settings saved')} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>
       </div>
     </Card>
+  );
+}
+
+/** One image slot: preview, upload / replace, remove. Uploads right away; the path is kept when the form is saved. */
+function ImagePicker({ label, path, url, onChange, hint, error }: {
+  label: string; path: string | null; url: string | undefined; hint: string; error?: string;
+  onChange: (path: string | null, url?: string) => void;
+}) {
+  const { showToast } = useApp();
+  const input = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const pick = async (file: File | undefined) => {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.set('image', file);
+      const res = await api.upload<{ data: { path: string; url: string } }>('/admin/settings/homepage/images', form);
+      onChange(res.data.path, res.data.url);
+    } catch (err) {
+      const message = err instanceof ApiError && err.status === 422 ? (err.fieldErrors().image ?? err.message) : (err as Error).message;
+      showToast('error', message);
+    } finally {
+      setUploading(false);
+      if (input.current) input.current.value = '';
+    }
+  };
+
+  return (
+    <div>
+      <p className="text-sm font-medium text-slate-700 mb-1">{label}</p>
+      <div className="flex items-center gap-4">
+        <div className="w-40 h-24 shrink-0 rounded-lg border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center">
+          {path && url
+            ? <img src={url} alt="" className="w-full h-full object-cover" />
+            : <ImageIcon size={22} className="text-slate-300" aria-hidden="true" />}
+        </div>
+        <div className="flex flex-col gap-2">
+          <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e => pick(e.target.files?.[0])} />
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => input.current?.click()} disabled={uploading}>
+              <Upload size={14} /> {uploading ? 'Uploading…' : path ? 'Replace' : 'Upload image'}
+            </Button>
+            {path && <Button variant="ghost" size="sm" onClick={() => onChange(null)} disabled={uploading}>Remove</Button>}
+          </div>
+          <p className="text-xs text-slate-400">{hint}</p>
+        </div>
+      </div>
+      <FieldError message={error} />
+    </div>
+  );
+}
+
+const MAX_SLIDES = 3;
+const emptySlide = (): HomepageSlide => ({ image: '', title: '', subtitle: null, button_text: null, link: null });
+
+function HomepageSettings({ initial, imageUrls }: { initial: Settings['homepage']; imageUrls: Record<string, string> }) {
+  const [values, setValues] = useState(initial);
+  const [urls, setUrls] = useState(imageUrls);
+  const { save, saving, errors } = useSaveGroup('homepage');
+
+  const remember = (path: string | null, url?: string) => { if (path && url) setUrls(u => ({ ...u, [path]: url })); };
+  const setSlide = (i: number, patch: Partial<HomepageSlide>) =>
+    setValues(s => ({ ...s, slides: s.slides.map((slide, j) => (j === i ? { ...slide, ...patch } : slide)) }));
+  const moveSlide = (i: number, by: -1 | 1) => setValues(s => {
+    const slides = [...s.slides];
+    [slides[i], slides[i + by]] = [slides[i + by], slides[i]];
+    return { ...s, slides };
+  });
+
+  const incomplete = values.slides.some(s => !s.image || !s.title.trim());
+
+  return (
+    <div className="space-y-5">
+      <Card>
+        <h2 className={cardTitle}>Hero Text</h2>
+        <div className="space-y-4">
+          <div>
+            <Textarea label="Headline" rows={2} value={values.headline} onChange={v => setValues(s => ({ ...s, headline: v }))} />
+            <p className="text-xs text-slate-400 mt-1">The big line at the top of the home page. Up to 140 characters.</p>
+            <FieldError message={errors.headline} />
+          </div>
+          <div>
+            <Textarea label="Sub-text" rows={2} value={values.subtext ?? ''} onChange={v => setValues(s => ({ ...s, subtext: v }))} />
+            <FieldError message={errors.subtext} />
+          </div>
+          <div>
+            <Input label="Search Box Placeholder" value={values.search_placeholder} onChange={v => setValues(s => ({ ...s, search_placeholder: v }))} />
+            <FieldError message={errors.search_placeholder} />
+          </div>
+        </div>
+      </Card>
+
+      <Card>
+        <h2 className={cardTitle}>Background Image</h2>
+        <ImagePicker label="Hero background" path={values.hero_image} url={values.hero_image ? urls[values.hero_image] : undefined}
+          hint="Wide photo, at least 1600 × 900. JPG, PNG or WebP up to 4 MB. A dark overlay keeps the text readable."
+          error={errors.hero_image}
+          onChange={(path, url) => { remember(path, url); setValues(s => ({ ...s, hero_image: path })); }} />
+      </Card>
+
+      <Card>
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+          <h2 className="text-sm font-semibold text-slate-800">Banner Slides</h2>
+          <span className="text-xs text-slate-400">{values.slides.length} of {MAX_SLIDES}</span>
+        </div>
+        <p className="text-xs text-slate-500 mb-4">
+          Shown beside the headline and rotated every few seconds. With no slides, the home page shows featured coupons instead.
+        </p>
+        <div className="space-y-4">
+          {values.slides.map((slide, i) => (
+            <div key={i} className="rounded-lg border border-slate-200 p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-slate-700">Slide {i + 1}</p>
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => moveSlide(i, -1)} disabled={i === 0}><ArrowUp size={14} /><span className="sr-only">Move up</span></Button>
+                  <Button variant="ghost" size="sm" onClick={() => moveSlide(i, 1)} disabled={i === values.slides.length - 1}><ArrowDown size={14} /><span className="sr-only">Move down</span></Button>
+                  <Button variant="ghost" size="sm" onClick={() => setValues(s => ({ ...s, slides: s.slides.filter((_, j) => j !== i) }))}><Trash2 size={14} /><span className="sr-only">Remove slide</span></Button>
+                </div>
+              </div>
+              <ImagePicker label="Slide image" path={slide.image || null} url={slide.image ? urls[slide.image] : undefined}
+                hint="Landscape, about 1200 × 800. JPG, PNG or WebP up to 4 MB." error={errors[`slides.${i}.image`]}
+                onChange={(path, url) => { remember(path, url); setSlide(i, { image: path ?? '' }); }} />
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div><Input label="Title" required value={slide.title} onChange={v => setSlide(i, { title: v })} /><FieldError message={errors[`slides.${i}.title`]} /></div>
+                <div><Input label="Sub-title" value={slide.subtitle ?? ''} onChange={v => setSlide(i, { subtitle: v })} /><FieldError message={errors[`slides.${i}.subtitle`]} /></div>
+                <div><Input label="Button Text" placeholder="Shop now" value={slide.button_text ?? ''} onChange={v => setSlide(i, { button_text: v })} /><FieldError message={errors[`slides.${i}.button_text`]} /></div>
+                <div>
+                  <Input label="Button Link" placeholder="/stores/nike or https://…" value={slide.link ?? ''} onChange={v => setSlide(i, { link: v })} />
+                  <FieldError message={errors[`slides.${i}.link`]} />
+                </div>
+              </div>
+            </div>
+          ))}
+          {values.slides.length < MAX_SLIDES && (
+            <Button variant="outline" size="sm" onClick={() => setValues(s => ({ ...s, slides: [...s.slides, emptySlide()] }))}>
+              <Plus size={14} /> Add slide
+            </Button>
+          )}
+        </div>
+      </Card>
+
+      <div className="flex items-center justify-end gap-3">
+        {incomplete && <p className="text-xs text-amber-600">Each slide needs an image and a title.</p>}
+        <Button variant="outline" size="sm" onClick={() => setValues(initial)} disabled={saving}>Discard</Button>
+        <Button size="sm" onClick={() => save(values, 'Homepage saved')} disabled={saving || incomplete}>{saving ? 'Saving…' : 'Save Homepage'}</Button>
+      </div>
+    </div>
   );
 }
 
@@ -245,7 +395,7 @@ export default function SettingsPage() {
   const { section } = useParams();
   const isAdmin = useCan('admin');
   const isSettingsGroup = section !== 'account';
-  const { data, loading, error, reload } = useApi<{ data: Settings }>(isSettingsGroup && isAdmin ? '/admin/settings' : null);
+  const { data, loading, error, reload } = useApi<{ data: Settings; meta?: { homepage_image_urls?: Record<string, string> } }>(isSettingsGroup && isAdmin ? '/admin/settings' : null);
 
   // Everyone has My Account; the site-wide groups are for admins.
   if (!SECTIONS.includes(section as Section) || (isSettingsGroup && !isAdmin)) return <Navigate to="/settings/account" replace />;
@@ -256,6 +406,7 @@ export default function SettingsPage() {
       {section === 'account' && <AccountSettings />}
       {isSettingsGroup && !data && <FormLoadState loading={loading} error={error} onRetry={reload} />}
       {data && section === 'general' && <GeneralSettings initial={data.data.general} />}
+      {data && section === 'homepage' && <HomepageSettings initial={data.data.homepage} imageUrls={data.meta?.homepage_image_urls ?? {}} />}
       {data && section === 'seo' && <SeoSettings initial={data.data.seo} />}
       {data && section === 'notifications' && <NotificationSettings initial={data.data.notifications} />}
       {data && section === 'security' && <SecuritySettings initial={data.data.security} />}

@@ -8,16 +8,23 @@ const FALLBACK: SiteSettings = {
   site_name: 'Coupon Follow',
   support_email: '',
   meta_title: '',
-  meta_description: 'Find working coupon codes and deals for the stores you already shop, updated every day.',
+  meta_description: 'Free promo codes and deals for Amazon, Walmart, Nike, Sephora and more. Reveal a code, shop in a new tab and save at checkout. No sign-up needed.',
   meta_keywords: '',
   timezone: 'America/New_York',
+  homepage: {
+    headline: 'Save more at the stores you love.',
+    subtext: 'Free promo codes and deals from popular brands. Find your store, copy the code, and save at checkout.',
+    search_placeholder: 'Search a store or brand',
+    hero_image_url: null,
+    slides: [],
+  },
 };
 
 const SiteContext = createContext<SiteSettings>(FALLBACK);
 
 const withFallback = (data: SiteSettings): SiteSettings => ({ ...FALLBACK, ...data, meta_description: data.meta_description || FALLBACK.meta_description });
 
-/** Loads the admin-editable site name, support email, SEO defaults and timezone once per visit. */
+/** Loads the admin-editable site name, support email, SEO defaults, timezone and home hero once per visit. */
 export function SiteProvider({ children }: { children: ReactNode }) {
   // A pre-rendered page carries the settings it was built with, so its first render uses the same name.
   const [settings, setSettings] = useState<SiteSettings>(() => {

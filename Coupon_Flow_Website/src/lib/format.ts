@@ -36,16 +36,19 @@ export function expiryLabel(expiresAt: string | null, timezone: string): string 
 /**
  * The big figure printed on a coupon's stub, pulled from its title:
  * "Save 20% on…" -> "20%", "$50 Off $250+" -> "$50", "Buy 2 Get 1 Free" -> "B2G1", "Free Shipping…" -> "Free".
+ * A dollar amount counts as the discount only when "off" follows it, so "Free Shipping Over $20" stays "Free shipping".
  */
 export function stubFigure(title: string): { figure: string; caption: string } {
   const percent = /(\d{1,2})\s?%/.exec(title);
   if (percent) return { figure: `${percent[1]}%`, caption: 'off' };
-  const amount = /\$\s?(\d[\d,]*)/.exec(title);
-  if (amount) return { figure: `$${amount[1]}`, caption: 'off' };
+  const amountOff = /\$\s?(\d[\d,]*)\s*off/i.exec(title);
+  if (amountOff) return { figure: `$${amountOff[1]}`, caption: 'off' };
   const bogo = /buy\s+(\d)\s+get\s+(\d)/i.exec(title);
   if (bogo) return { figure: `B${bogo[1]}G${bogo[2]}`, caption: 'free' };
   if (/free shipping/i.test(title)) return { figure: 'Free', caption: 'shipping' };
-  return { figure: 'Deal', caption: 'today' };
+  const amount = /\$\s?(\d[\d,]*)/.exec(title);
+  if (amount) return { figure: `$${amount[1]}`, caption: 'off' };
+  return { figure: 'Special', caption: 'offer' };
 }
 
 /** ?page= from the URL as a whole number of at least 1 (bad values fall back to 1). */

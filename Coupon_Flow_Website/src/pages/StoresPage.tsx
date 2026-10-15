@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
-import { EmptyState, ErrorState, Pager, Spinner, StoreCard } from '../components/States';
+import { CardSkeletons, EmptyState, ErrorState, PageHeader, Pager, StoreCard } from '../components/States';
 import { withQuery } from '../lib/api';
 import { useApi, useDebounced, usePageMeta } from '../lib/hooks';
 import { pageParam } from '../lib/format';
@@ -41,7 +41,7 @@ export default function StoresPage() {
     if (debounced.trim() !== (paramsRef.current.get('q') ?? '')) update({ q: debounced.trim(), letter: '' });
   }, [debounced]);
 
-  usePageMeta(letter ? `Stores starting with ${letter}` : 'Stores A to Z', 'Every store with live coupon codes and deals, from A to Z.');
+  usePageMeta(letter ? `Stores starting with ${letter}` : 'Stores A to Z', 'Browse every store on the site from A to Z and find promo codes and deals for the brands you shop.');
 
   const categories = useApi<{ data: Category[] }>('/public/categories?type=store');
   const { data, loading, error, reload } = useApi<Paginated<Store>>(withQuery('/public/stores', {
@@ -50,41 +50,42 @@ export default function StoresPage() {
   const stores = data?.data ?? [];
 
   return (
-    <div className="page py-10">
-      <h1 className="page-title">Stores A to Z</h1>
-      <p className="mt-2 text-ink-soft">Pick a store to see every live code and deal for it.</p>
-
-      <div className="mt-6 flex flex-col gap-3 rounded-xl bg-card p-4 ring-1 ring-line">
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <input value={text} onChange={e => setText(e.target.value)} placeholder="Search stores" aria-label="Search stores" className="field sm:max-w-sm" />
-          <select value={category} onChange={e => update({ category: e.target.value })} aria-label="Category" className="field sm:w-52">
-            <option value="">All categories</option>
-            {categories.data?.data.map(c => <option key={c.id} value={c.slug}>{c.name}</option>)}
-          </select>
-          <select value={sort} onChange={e => update({ sort: e.target.value === 'name' ? '' : e.target.value })} aria-label="Sort by" className="field sm:ml-auto sm:w-52">
-            {SORTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-          </select>
+    <>
+      <PageHeader title="Stores A to Z" intro="Choose a store to see all of its current codes and deals."
+        aside={data && <p className="text-sm font-semibold text-ink-soft">{data.meta.total.toLocaleString('en-US')} {data.meta.total === 1 ? 'store' : 'stores'}</p>} />
+      <div className="page py-8">
+        <div className="panel flex flex-col gap-3 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <input value={text} onChange={e => setText(e.target.value)} placeholder="Search stores" aria-label="Search stores" className="field sm:max-w-sm" />
+            <select value={category} onChange={e => update({ category: e.target.value })} aria-label="Category" className="field sm:w-52">
+              <option value="">All categories</option>
+              {categories.data?.data.map(c => <option key={c.id} value={c.slug}>{c.name}</option>)}
+            </select>
+            <select value={sort} onChange={e => update({ sort: e.target.value === 'name' ? '' : e.target.value })} aria-label="Sort by" className="field sm:ml-auto sm:w-52">
+              {SORTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+          </div>
+          <nav aria-label="Stores by first letter" className="flex flex-wrap gap-1">
+            <button onClick={() => update({ letter: '' })} aria-pressed={!letter}
+              className={`h-9 rounded-lg px-3 text-sm font-semibold ${!letter ? 'bg-ink text-white' : 'text-ink-soft hover:bg-marigold-soft hover:text-ink'}`}>All</button>
+            {LETTERS.map(l => (
+              <button key={l} onClick={() => { setText(''); update({ letter: l, q: '' }); }} aria-pressed={letter === l}
+                aria-label={l === '#' ? 'Stores starting with a number' : `Stores starting with ${l}`}
+                className={`h-9 w-9 rounded-lg text-sm font-semibold ${letter === l ? 'bg-ink text-white' : 'text-ink-soft hover:bg-marigold-soft hover:text-ink'}`}>{l}</button>
+            ))}
+          </nav>
         </div>
-        <nav aria-label="Stores by first letter" className="flex flex-wrap gap-1">
-          <button onClick={() => update({ letter: '' })} aria-pressed={!letter}
-            className={`h-9 rounded-lg px-3 text-sm font-semibold ${!letter ? 'bg-ink text-white' : 'text-ink-soft hover:bg-paper'}`}>All</button>
-          {LETTERS.map(l => (
-            <button key={l} onClick={() => { setText(''); update({ letter: l, q: '' }); }} aria-pressed={letter === l}
-              aria-label={l === '#' ? 'Stores starting with a number' : `Stores starting with ${l}`}
-              className={`h-9 w-9 rounded-lg text-sm font-semibold ${letter === l ? 'bg-ink text-white' : 'text-ink-soft hover:bg-paper'}`}>{l}</button>
-          ))}
-        </nav>
-      </div>
 
-      <section className="mt-8" aria-label="Stores">
-        {error && <ErrorState message={error} onRetry={reload} />}
-        {loading && !data && <Spinner />}
-        {data && stores.length === 0 && <EmptyState title="No stores match that search">Check the spelling, or pick a different letter or category.</EmptyState>}
-        <ul className={`grid gap-3 sm:grid-cols-2 lg:grid-cols-3 ${loading ? 'opacity-60' : ''}`}>
-          {stores.map(s => <li key={s.id}><StoreCard store={s} /></li>)}
-        </ul>
-        <Pager meta={data?.meta ?? null} onPage={p => { update({ page: String(p) }); window.scrollTo(0, 0); }} />
-      </section>
-    </div>
+        <section className="mt-8" aria-label="Stores">
+          {error && <ErrorState message={error} onRetry={reload} />}
+          {loading && !data && <CardSkeletons count={9} />}
+          {data && stores.length === 0 && <EmptyState title="No stores found">Check the spelling, or try a different letter or category.</EmptyState>}
+          <ul className={`grid gap-3 sm:grid-cols-2 lg:grid-cols-3 ${loading ? 'opacity-60' : ''}`}>
+            {stores.map(s => <li key={s.id}><StoreCard store={s} /></li>)}
+          </ul>
+          <Pager meta={data?.meta ?? null} onPage={p => { update({ page: String(p) }); window.scrollTo(0, 0); }} />
+        </section>
+      </div>
+    </>
   );
 }

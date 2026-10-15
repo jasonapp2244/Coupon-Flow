@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router';
 import {
   LayoutDashboard, Store, Tag, FileText, BarChart2, Plug, Settings, ChevronDown, ChevronRight,
   Bell, HelpCircle, Search, X, Menu, User, LogOut, ShoppingCart, Clock, Trash2,
-  ChevronLeft, Ticket, FolderOpen, ShieldCheck, Users, History,
+  ChevronLeft, Ticket, FolderOpen, ShieldCheck, Users, History, House,
 } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { allows, ROLE_LABELS, type Permission } from '../lib/permissions';
@@ -59,6 +59,7 @@ const navItems: NavItem[] = [
     label: 'Settings', icon: <Settings size={16} />, children: [
       { label: 'My Account', path: '/settings/account', icon: <User size={14} /> },
       { label: 'General', path: '/settings/general', icon: <Settings size={14} />, need: 'admin' },
+      { label: 'Homepage', path: '/settings/homepage', icon: <House size={14} />, need: 'admin' },
       { label: 'Notifications', path: '/settings/notifications', icon: <Bell size={14} />, need: 'admin' },
       { label: 'SEO', path: '/settings/seo', icon: <BarChart2 size={14} />, need: 'admin' },
       { label: 'Security', path: '/settings/security', icon: <ShieldCheck size={14} />, need: 'admin' },

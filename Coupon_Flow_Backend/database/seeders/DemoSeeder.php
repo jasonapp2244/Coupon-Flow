@@ -47,19 +47,19 @@ class DemoSeeder extends Seeder
             'status' => $s[5],
         ])]);
 
-        // [store, title, type, code, expiry, status, featured, verified, exclusive]
+        // [store, title, type, code, expiry, status, featured, verified, exclusive, description]
         $coupons = [
-            ['Amazon', 'Save 20% on All Orders', 'Coupon Code', 'SAVE20FALL', 'Oct 31, 2026', 'Active', true, true, false],
-            ['Walmart', 'Free Shipping on $50+', 'No Code Required', null, 'Dec 31, 2026', 'Active', false, true, false],
-            ['Nike', '15% Off Nike Running Shoes', 'Coupon Code', 'NIKE15RUN', 'Oct 15, 2026', 'Active', true, true, true],
-            ['Target', '$25 Off $100 Target Order', 'Coupon Code', 'TARGET25', 'Sep 30, 2026', 'Expired', false, false, false],
-            ['eBay', 'eBay Extra 10% Off Electronics', 'Deal', null, 'Nov 15, 2026', 'Active', true, true, false],
-            ['Sephora', 'Sephora Beauty Sale — 30% Off', 'Coupon Code', 'BEAUTY30', 'Nov 5, 2026', 'Active', false, true, true],
-            ['Best Buy', 'Best Buy: $50 Off $250+', 'Coupon Code', 'BBY50OFF', 'Nov 30, 2026', 'Active', true, true, true],
-            ['Adidas', 'Adidas: Buy 2 Get 1 Free', 'Deal', null, 'Oct 20, 2026', 'Active', true, false, false],
+            ['Amazon', '20% off your order', 'Coupon Code', 'SAVE20FALL', 'Oct 31, 2026', 'Active', true, true, false, 'Take 20% off eligible items sitewide with this code. Some products and third-party sellers may be excluded, so check the discount in your cart before you pay.'],
+            ['Walmart', 'Free shipping on orders of $50 or more', 'No Code Required', null, 'Dec 31, 2026', 'Active', false, true, false, 'No code needed. Spend $50 or more on eligible items and standard shipping is free. The discount is applied automatically at checkout.'],
+            ['Nike', '15% off running shoes', 'Coupon Code', 'NIKE15RUN', 'Oct 15, 2026', 'Active', true, true, true, 'Save 15% on selected Nike running shoes. Paste the code at checkout; new releases and limited editions may not be included.'],
+            ['Target', '$25 off orders of $100 or more', 'Coupon Code', 'TARGET25', 'Sep 30, 2026', 'Expired', false, false, false, 'Get $25 off when you spend $100 or more on eligible items. Gift cards and some brands may be excluded.'],
+            ['eBay', 'Extra 10% off electronics', 'Deal', null, 'Nov 15, 2026', 'Active', true, true, false, 'An extra 10% off selected electronics from participating sellers. The offer page on eBay lists the eligible items and any spending cap.'],
+            ['Sephora', '30% off during the beauty sale', 'Coupon Code', 'BEAUTY30', 'Nov 5, 2026', 'Active', false, true, true, 'Take 30% off selected makeup, skincare and fragrance while the sale runs. Exclusions may apply to some brands.'],
+            ['Best Buy', '$50 off orders of $250 or more', 'Coupon Code', 'BBY50OFF', 'Nov 30, 2026', 'Active', true, true, true, 'Save $50 when you spend $250 or more on eligible products. Some brands may be excluded; your cart will show the final price.'],
+            ['Adidas', 'Buy 2, get 1 free', 'Deal', null, 'Oct 20, 2026', 'Active', true, false, false, 'Add three eligible items to your bag and the lowest-priced one is free. No code needed; the discount appears at checkout.'],
         ];
 
-        foreach ($coupons as [$store, $title, $type, $code, $expiry, $status, $featured, $verified, $exclusive]) {
+        foreach ($coupons as [$store, $title, $type, $code, $expiry, $status, $featured, $verified, $exclusive, $description]) {
             Coupon::updateOrCreate(['store_id' => $stores[$store]->id, 'title' => $title], [
                 'type' => $type,
                 'code' => $code,
@@ -68,7 +68,7 @@ class DemoSeeder extends Seeder
                 'is_featured' => $featured,
                 'is_verified' => $verified,
                 'is_exclusive' => $exclusive,
-                'description' => "{$title} at {$store}. Terms apply.",
+                'description' => $description,
             ]);
         }
 
@@ -81,12 +81,13 @@ class DemoSeeder extends Seeder
         ];
 
         foreach ($blogs as [$title, $category, $status, $date, $featured]) {
-            Blog::updateOrCreate(['slug' => Str::slug($title)], [
+            // firstOrCreate: re-seeding never overwrites an article someone has since written.
+            Blog::firstOrCreate(['slug' => Str::slug($title)], [
                 'title' => $title,
                 'category_id' => $blogCategories[$category],
                 'author_id' => $admin->id,
-                'excerpt' => "{$title} — our editors' picks.",
-                'body' => "Full article for \"{$title}\".",
+                'excerpt' => 'A short summary of this guide. Edit it in Admin → Blogs.',
+                'body' => "## {$title}\n\nWrite the article in Admin → Blogs.",
                 'status' => $status,
                 'published_at' => $date ? Carbon::parse($date) : null,
                 'is_featured' => $featured,

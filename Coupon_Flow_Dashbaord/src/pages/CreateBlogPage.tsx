@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { Upload, X } from 'lucide-react';
 import { Card, Input, Textarea, Toggle, Button, PageHeader } from '../components/ui';
 import { FieldError, FormLoadState, ImagePicker } from '../components/FormParts';
+import { ArticleEditor } from '../components/ArticleEditor';
 import { api, ApiError, toFormData } from '../lib/api';
 import { useApi, useCategories } from '../lib/hooks';
 import { slugify } from '../lib/format';
@@ -105,8 +106,17 @@ function BlogForm({ blog }: { blog: Blog | null }) {
       <Card>
         <h2 className="text-sm font-semibold text-slate-800 mb-4 pb-3 border-b border-slate-100">Content</h2>
         <div className="space-y-4">
-          <Textarea label="Short Description" placeholder="Brief summary displayed in listings..." rows={3} value={excerpt} onChange={setExcerpt} />
-          <Textarea label="Article" placeholder="Full blog content..." rows={12} value={body} onChange={setBody} />
+          <div>
+            <Textarea label="Short Description" placeholder="One or two sentences that make readers want the full article. Shown on blog cards and under the title." rows={3} value={excerpt} onChange={v => { setExcerpt(v); clearError('excerpt'); }} />
+            <p className={`text-xs text-right mt-0.5 ${excerpt.length > 300 ? 'text-amber-600' : 'text-slate-400'}`}>{excerpt.length}/300 recommended</p>
+            <FieldError message={errors.excerpt} />
+          </div>
+          <div>
+            <ArticleEditor label="Article" value={body} error={errors.body}
+              placeholder={'## Start with a heading\n\nWrite a paragraph. Leave a blank line between paragraphs.\n\n- Use the toolbar for lists, bold text, links and tips'}
+              onChange={v => { setBody(v); clearError('body'); }} />
+            <FieldError message={errors.body} />
+          </div>
         </div>
       </Card>
 

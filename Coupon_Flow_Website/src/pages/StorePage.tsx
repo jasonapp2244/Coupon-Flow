@@ -1,8 +1,9 @@
 import { Link, useParams } from 'react-router';
+import { BadgeCheck, ExternalLink, Star, TicketPercent } from 'lucide-react';
 import CouponTicket from '../components/CouponTicket';
 import { RichText } from '../components/RichText';
 import StoreRating from '../components/StoreRating';
-import { Breadcrumbs, EmptyState, ErrorState, NotFound, Spinner, StoreLogo, breadcrumbJsonLd, type Crumb } from '../components/States';
+import { Breadcrumbs, EmptyState, ErrorState, NotFound, StoreLogo, TicketSkeletons, breadcrumbJsonLd, type Crumb } from '../components/States';
 import { siteOrigin } from '../lib/head';
 import { useApi, usePageMeta } from '../lib/hooks';
 import { goStoreUrl, openOut } from '../lib/out';
@@ -30,7 +31,6 @@ export default function StorePage() {
   const site = useSite();
   const { data, loading, error, status, reload } = useApi<StorePageData>(`/public/stores/${slug}`);
   const store = data?.data;
-  // Paid coupons only arrive while the admin sells exclusive codes (Settings → General).
   const coupons = data?.coupons ?? [];
 
   const crumbs: Crumb[] = [
@@ -43,7 +43,7 @@ export default function StorePage() {
   usePageMeta(
     store ? (store.meta_title || `${store.name} coupons and promo codes`) : null,
     {
-      description: store?.meta_description || (store ? `Live ${store.name} coupon codes and deals, checked by the ${site.site_name} team.` : null),
+      description: store?.meta_description || (store ? `Save at ${store.name} with the latest promo codes and deals on ${site.site_name}. Reveal a code and paste it at checkout.` : null),
       image: store?.logo_url,
       // Also served at /promotions/at/{slug} (share links); search engines index /stores/{slug} only.
       canonicalPath: `/stores/${slug}`,
@@ -53,67 +53,86 @@ export default function StorePage() {
 
   if (status === 404) return <NotFound what="store" />;
   if (!store || !data) {
-    return <div className="page py-10">{loading ? <Spinner /> : error && <ErrorState message={error} onRetry={reload} />}</div>;
+    return <div className="page py-10">{loading ? <TicketSkeletons /> : error && <ErrorState message={error} onRetry={reload} />}</div>;
   }
 
-  const intro = store.description || store.heading || `Live ${store.name} coupon codes and deals, updated regularly.`;
+  // The heading often just repeats the H1 ("{store} coupons & promo codes"); then the default line reads better.
+  const h1 = `${store.name} coupons & promo codes`.toLowerCase();
+  const heading = store.heading && store.heading.trim().toLowerCase() !== h1 ? store.heading : null;
+  const intro = store.description || heading || `The latest ${store.name} promo codes and deals, all in one place.`;
+  const codes = coupons.filter(c => c.has_code).length;
+  const verified = coupons.filter(c => c.is_verified).length;
+  const rating = store.rating;
 
   return (
-    <div className="page py-8">
-      <Breadcrumbs items={crumbs} />
-
-      <header className="mt-6 grid gap-6 sm:grid-cols-[auto_1fr] sm:items-start">
-        <div className="flex flex-row items-center gap-4 sm:flex-col">
-          <StoreLogo name={store.name} url={store.logo_url} size="lg" />
-          <button onClick={() => openOut(goStoreUrl(store.slug))} className="btn-primary uppercase">
-            View store<span className="sr-only"> (opens {store.name} in a new tab)</span>
-          </button>
-        </div>
-        <div className="min-w-0 border-b border-line pb-6">
-          <h1 className="page-title text-deal">{store.name} Coupons &amp; Promo Codes</h1>
-          <p className="mt-3 text-ink-soft">{intro}</p>
+    <>
+      <header className="border-b border-line bg-card">
+        <div className="page py-8 sm:py-10">
+          <Breadcrumbs items={crumbs} />
+          <div className="mt-6 grid gap-6 sm:grid-cols-[auto_1fr] sm:items-center">
+            <div className="flex flex-row items-center gap-4 sm:flex-col">
+              <StoreLogo name={store.name} url={store.logo_url} size="xl" />
+              <button onClick={() => openOut(goStoreUrl(store.slug))} className="btn-primary sm:w-full">
+                View store <ExternalLink size={14} aria-hidden="true" /><span className="sr-only"> (opens {store.name} in a new tab)</span>
+              </button>
+            </div>
+            <div className="min-w-0">
+              <h1 className="page-title">{store.name} coupons &amp; promo codes</h1>
+              <p className="mt-3 max-w-2xl text-lg text-ink-soft">{intro}</p>
+              <ul className="mt-5 flex flex-wrap gap-2 text-sm" aria-label={`${store.name} at a glance`}>
+                <li className="badge bg-paper px-3 py-1.5 text-sm text-ink ring-1 ring-line"><TicketPercent size={15} aria-hidden="true" /> {coupons.length} {coupons.length === 1 ? 'offer' : 'offers'}</li>
+                {codes > 0 && <li className="badge bg-marigold-soft px-3 py-1.5 text-sm text-ink">{codes} {codes === 1 ? 'code' : 'codes'}</li>}
+                {verified > 0 && <li className="badge bg-deal-soft px-3 py-1.5 text-sm text-deal-dark"><BadgeCheck size={15} aria-hidden="true" /> {verified} verified</li>}
+                {rating && rating.average !== null && rating.count > 0 && (
+                  <li className="badge bg-paper px-3 py-1.5 text-sm text-ink ring-1 ring-line"><Star size={15} className="text-marigold-deep" fill="currentColor" strokeWidth={0} aria-hidden="true" /> {rating.average} of 5</li>
+                )}
+              </ul>
+            </div>
+          </div>
         </div>
       </header>
 
-      <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_18rem]">
-        <div className="min-w-0">
-          {coupons.length === 0
-            ? <EmptyState title={`No live ${store.name} coupons right now`}>New codes are added regularly. Check back soon.</EmptyState>
-            : (
-              <ul className="flex flex-col gap-4" aria-label={`${store.name} coupons`}>
-                {coupons.map(c => <li key={c.id}><CouponTicket coupon={c} showStore={false} /></li>)}
-              </ul>
+      <div className="page py-10">
+        <div className="grid gap-10 lg:grid-cols-[1fr_19rem]">
+          <div className="min-w-0">
+            {coupons.length === 0
+              ? <EmptyState title={`No ${store.name} offers right now`}>We add new codes as stores release them, so check back soon.</EmptyState>
+              : (
+                <ul className="flex flex-col gap-4" aria-label={`${store.name} coupons`}>
+                  {coupons.map(c => <li key={c.id}><CouponTicket coupon={c} showStore={false} /></li>)}
+                </ul>
+              )}
+
+            {store.content && (
+              <section className="panel mt-12 p-6 sm:p-8" aria-labelledby="about-heading">
+                <h2 id="about-heading" className="section-title">About {store.name}</h2>
+                <div className="max-w-2xl"><RichText text={store.content} /></div>
+              </section>
             )}
+          </div>
 
-          {store.content && (
-            <section className="mt-12 max-w-2xl" aria-labelledby="about-heading">
-              <h2 id="about-heading" className="section-title">About {store.name}</h2>
-              <RichText text={store.content} />
-            </section>
-          )}
+          <aside className="flex flex-col gap-6 self-start lg:sticky lg:top-24">
+            <StoreRating slug={store.slug} name={store.name} initial={store.rating} />
+
+            {data.related.length > 0 && (
+              <section className="panel p-5" aria-labelledby="top-stores-heading">
+                <h2 id="top-stores-heading" className="font-display text-xl font-extrabold">Similar stores</h2>
+                <ul className="mt-4 grid grid-cols-2 gap-2">
+                  {data.related.map(r => (
+                    <li key={r.id}>
+                      <Link to={`/stores/${r.slug}`} className="flex flex-col items-center gap-2 rounded-xl p-2.5 text-center text-sm font-medium transition-colors hover:bg-paper">
+                        <StoreLogo name={r.name} url={r.logo_url} size="md" />
+                        <span className="line-clamp-1">{r.name}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                <Link to="/stores" className="btn-secondary mt-4 w-full">View all stores</Link>
+              </section>
+            )}
+          </aside>
         </div>
-
-        <aside className="flex flex-col gap-6 self-start">
-          <StoreRating slug={store.slug} name={store.name} initial={store.rating} />
-
-          {data.related.length > 0 && (
-            <section className="rounded-xl bg-card p-5 ring-1 ring-line" aria-labelledby="top-stores-heading">
-              <h2 id="top-stores-heading" className="font-display text-2xl font-extrabold text-deal">Top Stores</h2>
-              <ul className="mt-4 grid grid-cols-2 gap-3">
-                {data.related.map(r => (
-                  <li key={r.id}>
-                    <Link to={`/stores/${r.slug}`} className="flex flex-col items-center gap-2 rounded-lg p-2 text-center text-sm font-medium hover:bg-paper">
-                      <StoreLogo name={r.name} url={r.logo_url} size="lg" />
-                      <span className="line-clamp-1">{r.name}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-              <Link to="/stores" className="mt-4 inline-block text-sm font-semibold hover:text-deal">View all stores</Link>
-            </section>
-          )}
-        </aside>
       </div>
-    </div>
+    </>
   );
 }
