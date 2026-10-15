@@ -4,7 +4,7 @@ Coupon Follow: a coupon and deals site with an admin dashboard and a Laravel API
 
 | Folder | What it is | Stack |
 |---|---|---|
-| `Coupon_Flow_Backend/` | REST API (`/api/v1`), Stripe Checkout, brand feeds, staff roles + two-step login | Laravel 12, MySQL/MariaDB, Sanctum |
+| `Coupon_Flow_Backend/` | REST API (`/api/v1`), click-outs, brand feeds, staff roles + two-step login | Laravel 12, MySQL/MariaDB, Sanctum |
 | `Coupon_Flow_Dashbaord/` | Admin dashboard | React 19, Vite, Tailwind CSS 4 |
 | `Coupon_Flow_Website/` | Public coupon site (pre-rendered for SEO) | React 19, Vite, Tailwind CSS 4, React Router |
 
@@ -18,7 +18,7 @@ Requirements: PHP 8.2+, Composer, MySQL or MariaDB, Node.js 22 (pnpm via `npx pn
 1. **API** (`Coupon_Flow_Backend`, port 8000)
 
    ```bash
-   cp .env.example .env        # set DB_*, ADMIN_EMAIL, ADMIN_PASSWORD, STRIPE_* (test keys)
+   cp .env.example .env        # set DB_*, ADMIN_EMAIL, ADMIN_PASSWORD
    composer install
    php artisan key:generate
    php artisan migrate --seed
@@ -43,4 +43,4 @@ Requirements: PHP 8.2+, Composer, MySQL or MariaDB, Node.js 22 (pnpm via `npx pn
 
 Tests: `php artisan test` in `Coupon_Flow_Backend`.
 
-Never commit `.env` files: they hold the database password, `APP_KEY` and Stripe keys.
+Never commit `.env` files: they hold the database and mail passwords and `APP_KEY`.

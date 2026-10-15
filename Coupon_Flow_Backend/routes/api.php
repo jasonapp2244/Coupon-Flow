@@ -2,16 +2,11 @@
 
 use App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\Customer;
 use App\Http\Controllers\Api\OutboundController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\PublicCatalogController;
-use App\Http\Controllers\Api\StripeWebhookController;
 use App\Http\Controllers\Api\TwoFactorController;
 use Illuminate\Support\Facades\Route;
-
-// Stripe calls this directly; authenticity comes from the signature, not a token.
-Route::post('stripe/webhook', StripeWebhookController::class)->name('stripe.webhook');
 
 // Click-outs: the website opens these in a new tab; merchant links never appear on its pages.
 Route::prefix('go')->middleware('throttle:clicks')->controller(OutboundController::class)->group(function () {
@@ -26,18 +21,14 @@ Route::prefix('v1')->group(function () {
         Route::middleware('throttle:auth')->group(function () {
             Route::post('login', [AuthController::class, 'login']);
             Route::post('two-factor', [AuthController::class, 'twoFactorChallenge']);
-            Route::post('register', [AuthController::class, 'register']);
             Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
             Route::post('reset-password', [AuthController::class, 'resetPassword']);
-            Route::get('email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
-                ->middleware('signed')->whereNumber('id')->name('verification.verify');
         });
 
         Route::middleware('auth:sanctum')->group(function () {
             Route::get('me', [AuthController::class, 'me']);
             Route::post('logout', [AuthController::class, 'logout']);
             Route::put('profile', [ProfileController::class, 'update']);
-            Route::post('email/resend', [AuthController::class, 'resendVerification'])->middleware('throttle:auth');
 
             // Two-step login (staff only).
             Route::controller(TwoFactorController::class)->prefix('two-factor')->middleware(['role:admin,editor,viewer', 'throttle:auth'])->group(function () {
@@ -68,19 +59,9 @@ Route::prefix('v1')->group(function () {
         Route::get('blogs/{slug}', 'blog');
     });
 
-    // ── Customer ────────────────────────────────────────────────────────────
-    Route::middleware(['auth:sanctum', 'role:customer'])->controller(Customer\OrderController::class)->group(function () {
-        Route::post('checkout', 'checkout')->middleware('throttle:checkout');
-        Route::get('orders', 'index');
-        Route::get('purchases', 'purchases');
-        Route::get('orders/session/{sessionId}', 'bySession');
-        Route::get('orders/{order}', 'show')->whereNumber('order');
-        Route::post('orders/{order}/cancel', 'cancel')->whereNumber('order');
-    });
-
     // ── Admin dashboard ─────────────────────────────────────────────────────
     // Staff roles: viewer reads everything below; editor also changes the catalogue;
-    // admin also manages settings, money, staff, feeds and the activity log.
+    // admin also manages settings, staff, feeds and the activity log.
     $catalog = ['stores' => Admin\StoreController::class, 'coupons' => Admin\CouponController::class, 'blogs' => Admin\BlogController::class];
 
     Route::prefix('admin')->middleware(['auth:sanctum', 'role:admin,editor,viewer', 'two_factor'])->group(function () use ($catalog) {
@@ -98,8 +79,6 @@ Route::prefix('v1')->group(function () {
         });
         Route::get('categories', [Admin\CategoryController::class, 'index']);
         Route::get('trash', [Admin\TrashController::class, 'index']);
-        Route::get('orders', [Admin\OrderController::class, 'index']);
-        Route::get('orders/{order}', [Admin\OrderController::class, 'show']);
 
         Route::controller(Admin\ActivityController::class)->group(function () {
             Route::get('redemptions', 'redemptions');
@@ -124,8 +103,10 @@ Route::prefix('v1')->group(function () {
             Route::post('coupons/{coupon}/reset-uses', [Admin\CouponController::class, 'resetUses']);
             Route::controller(Admin\CouponCodeController::class)->prefix('coupons/{coupon}/codes')->scopeBindings()->group(function () {
                 Route::post('/', 'store');
-                Route::delete('{code}', 'destroy');
+                Route::delete('{code}', 'destroy')->whereNumber('code');
             });
+            // Confirm (or fail) the sale behind a click: adds the order amount and the commission.
+            Route::patch('redemptions/{redemption}', [Admin\ActivityController::class, 'confirmSale'])->whereNumber('redemption');
             Route::controller(Admin\StoreRatingController::class)->prefix('stores/{store}/ratings')->scopeBindings()->group(function () {
                 Route::delete('/', 'reset');
                 Route::delete('{rating}', 'destroy')->whereNumber('rating');
@@ -136,10 +117,9 @@ Route::prefix('v1')->group(function () {
             Route::post('feed-sources/{feedSource}/import', [Admin\FeedSourceController::class, 'import'])->middleware('throttle:feeds');
         });
 
-        // ── Admin only: settings, money, permanent deletes, staff ──
+        // ── Admin only: settings, permanent deletes, staff ──
         Route::middleware('role:admin')->group(function () {
             Route::put('settings/{group}', [Admin\SettingsController::class, 'update']);
-            Route::post('orders/{order}/refund', [Admin\OrderController::class, 'refund']);
             Route::delete('trash', [Admin\TrashController::class, 'empty']);
             Route::delete('trash/{type}/{id}', [Admin\TrashController::class, 'destroy'])->whereNumber('id');
 

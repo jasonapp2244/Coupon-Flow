@@ -8,9 +8,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Public view of a coupon. It carries no code and no merchant link: a free code is shown by
- * the reveal endpoint after the shopper clicks out through /api/go, and a paid code is
- * delivered on the paid order (and by email).
+ * Public view of a coupon. It carries no code and no merchant link: the code is shown by the
+ * reveal endpoint after the shopper clicks out through /api/go.
  *
  * @mixin Coupon
  */
@@ -22,17 +21,15 @@ class PublicCouponResource extends JsonResource
             'id' => $this->id,
             'title' => $this->title,
             'type' => $this->type->value,
-            'has_code' => $this->isPaid() || filled($this->code),
+            'has_code' => $this->unique_codes || filled($this->code),
+            // Each click gets the next code of a list; uses_left is then the codes left.
+            'code_list' => $this->unique_codes,
             'description' => $this->description,
             'starts_at' => $this->starts_at?->toIso8601String(),
             'expires_at' => $this->expires_at?->toIso8601String(),
             'is_featured' => $this->is_featured,
             'is_verified' => $this->is_verified,
             'is_exclusive' => $this->is_exclusive,
-            'is_paid' => $this->isPaid(),
-            'price_cents' => $this->price_cents,
-            'currency' => config('services.stripe.currency'),
-            'in_stock' => $this->inStock(),
             // "Used 125 times · 375 left". used_count is the old name, kept for one release (cached bundles).
             'uses_count' => $this->uses_count,
             'used_count' => $this->uses_count,

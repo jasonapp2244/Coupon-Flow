@@ -15,21 +15,20 @@ class PublicCatalogTest extends TestCase
 
     public function test_coupon_listings_carry_no_codes_and_no_merchant_links(): void
     {
-        $this->enableShop();
         $store = Store::factory()->create(['direct_url' => 'https://merchant.test', 'tracking_url' => 'https://aff.test/store']);
         Coupon::factory()->for($store)->create(['code' => 'FREE10', 'title' => 'Free one', 'tracking_url' => 'https://aff.test/coupon']);
-        Coupon::factory()->for($store)->paid(299)->create(['code' => 'SECRET50', 'title' => 'Paid one']);
+        Coupon::factory()->for($store)->create(['code' => 'SAVE50', 'title' => 'Second one']);
         Coupon::factory()->for($store)->create(['type' => 'Deal', 'code' => null, 'title' => 'Zero deal']);
 
         $response = $this->getJson('/api/v1/public/coupons?sort=title&dir=asc')->assertOk();
 
         $response->assertJsonPath('data.0.title', 'Free one')->assertJsonPath('data.0.has_code', true)
-            ->assertJsonPath('data.1.title', 'Paid one')->assertJsonPath('data.1.has_code', true)
-            ->assertJsonPath('data.1.is_paid', true)->assertJsonPath('data.1.price_cents', 299)
+            ->assertJsonPath('data.1.title', 'Second one')->assertJsonPath('data.1.has_code', true)
             ->assertJsonPath('data.2.has_code', false)
-            ->assertJsonMissingPath('data.0.code')->assertJsonMissingPath('data.0.tracking_url');
+            ->assertJsonMissingPath('data.0.code')->assertJsonMissingPath('data.0.tracking_url')
+            ->assertJsonMissingPath('data.0.price_cents')->assertJsonMissingPath('data.0.is_paid');
 
-        foreach (['FREE10', 'SECRET50', 'merchant.test', 'aff.test'] as $secret) {
+        foreach (['FREE10', 'SAVE50', 'merchant.test', 'aff.test'] as $secret) {
             $this->assertStringNotContainsString($secret, $response->getContent());
         }
 

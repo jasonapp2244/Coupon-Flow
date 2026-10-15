@@ -77,19 +77,14 @@ class ClickOutTest extends TestCase
         $this->assertSame(0, Redemption::count());
     }
 
-    public function test_reveal_shows_a_free_code_but_never_a_paid_one(): void
+    public function test_reveal_shows_the_code_but_no_merchant_link(): void
     {
-        $this->enableShop();
         $free = Coupon::factory()->create(['code' => 'FREE10']);
-        $paid = Coupon::factory()->paid()->create(['code' => 'SECRET50']);
 
         $this->getJson("/api/v1/public/coupons/{$free->id}/reveal")->assertOk()
             ->assertJsonPath('data.code', 'FREE10')
             ->assertJsonPath('data.store.slug', $free->store->slug)
             ->assertJsonMissingPath('data.tracking_url');
-
-        $response = $this->getJson("/api/v1/public/coupons/{$paid->id}/reveal")->assertOk()->assertJsonPath('data.code', null);
-        $this->assertStringNotContainsString('SECRET50', $response->getContent());
 
         $this->getJson('/api/v1/public/coupons/'.Coupon::factory()->expired()->create()->id.'/reveal')->assertNotFound();
         $this->assertSame(0, Redemption::count());

@@ -9,63 +9,49 @@ use App\Models\User;
 use App\Notifications\AdminActivity;
 use App\Notifications\AdminAlertMail;
 use Database\Seeders\DatabaseSeeder;
-use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
-/** Email verification, sessions, settings safety, paid-coupon rules and production seeding. */
+/** Staff-only accounts, sessions, settings safety, coupon code rules and seeding. */
 class AccountSecurityTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_registration_emails_a_link_to_the_website_that_verifies_the_address(): void
+    public function test_the_public_site_has_no_accounts(): void
     {
         Notification::fake();
+        $shopper = User::factory()->create(['password' => 'Secret1234']);
 
         $this->postJson('/api/v1/auth/register', [
-            'name' => 'Test Customer', 'email' => 'tauseefchoohan0401@gmail.com',
+            'name' => 'Test', 'email' => 'tauseefchoohan0401@gmail.com',
             'password' => 'Secret1234', 'password_confirmation' => 'Secret1234',
-        ])->assertCreated()->assertJsonPath('user.email_verified', false);
+        ])->assertNotFound();
+        $this->getJson("/api/v1/auth/email/verify/{$shopper->id}/".sha1($shopper->email))->assertNotFound();
 
-        $user = User::sole();
-        $link = null;
-        Notification::assertSentTo($user, VerifyEmail::class, function (VerifyEmail $n) use ($user, &$link) {
-            $link = $n->toMail($user)->actionUrl;
-
-            return true;
-        });
-
-        $this->assertStringStartsWith(config('services.frontend.public_url').'/verify-email?link=', $link);
-        parse_str((string) parse_url($link, PHP_URL_QUERY), $query);
-
-        $this->getJson($query['link'])->assertOk()->assertJsonPath('message', 'Email confirmed.');
-        $this->assertTrue($user->fresh()->hasVerifiedEmail());
+        // Old shopper accounts can neither sign in nor get a reset link.
+        $this->postJson('/api/v1/auth/login', ['email' => $shopper->email, 'password' => 'Secret1234'])
+            ->assertUnprocessable()->assertJsonPath('errors.email.0', 'Incorrect email or password.');
+        $this->postJson('/api/v1/auth/forgot-password', ['email' => $shopper->email])->assertOk();
+        Notification::assertNothingSent();
     }
 
-    public function test_tampered_verification_link_is_rejected(): void
-    {
-        $user = User::factory()->unverified()->create();
-
-        $this->getJson("/api/v1/auth/email/verify/{$user->id}/".sha1($user->email).'?signature=forged')->assertForbidden();
-        $this->assertFalse($user->fresh()->hasVerifiedEmail());
-    }
-
-    public function test_changing_email_requires_confirming_the_new_address(): void
+    public function test_staff_can_change_their_email_without_a_confirmation_link(): void
     {
         Notification::fake();
-        Sanctum::actingAs($user = User::factory()->create(['password' => 'Secret1234']));
+        Sanctum::actingAs($user = User::factory()->admin()->create(['password' => 'Secret1234']));
 
         $this->putJson('/api/v1/auth/profile', ['email' => 'new@example.com', 'current_password' => 'Secret1234'])->assertOk();
 
-        $this->assertFalse($user->fresh()->hasVerifiedEmail());
-        Notification::assertSentTo($user, VerifyEmail::class);
+        $this->assertSame('new@example.com', $user->fresh()->email);
+        Notification::assertNothingSent();
     }
 
     public function test_changing_password_signs_out_other_devices_but_not_this_one(): void
     {
-        $user = User::factory()->create(['password' => 'Secret1234']);
+        $user = User::factory()->admin()->create(['password' => 'Secret1234']);
         $other = $user->createToken('phone')->plainTextToken;
         $current = $user->createToken('laptop')->plainTextToken;
 
@@ -78,50 +64,68 @@ class AccountSecurityTest extends TestCase
         $this->withToken($other)->getJson('/api/v1/auth/me')->assertUnauthorized();
     }
 
-    public function test_paid_coupon_needs_a_code_even_as_a_deal_and_on_partial_update(): void
+    public function test_coupon_code_type_needs_a_code_even_on_partial_update(): void
     {
         $this->actingAsAdmin();
         $store = Coupon::factory()->create()->store;
 
         $this->postJson('/api/v1/admin/coupons', [
-            'store_id' => $store->id, 'title' => 'Paid deal', 'type' => 'Deal', 'price_cents' => 199,
-        ])->assertUnprocessable()->assertJsonPath('errors.code.0', 'A paid coupon needs a code: it is what the buyer receives.');
+            'store_id' => $store->id, 'title' => 'Code', 'type' => 'Coupon Code',
+        ])->assertUnprocessable()->assertJsonPath('errors.code.0', 'Enter the coupon code.');
+        $this->postJson('/api/v1/admin/coupons', [
+            'store_id' => $store->id, 'title' => 'Deal', 'type' => 'Deal',
+        ])->assertCreated();
 
         $deal = Coupon::factory()->for($store)->create(['type' => 'Deal', 'code' => null]);
-        $this->putJson("/api/v1/admin/coupons/{$deal->id}", ['price_cents' => 299])->assertUnprocessable()->assertJsonValidationErrors('code');
-        $this->putJson("/api/v1/admin/coupons/{$deal->id}", ['price_cents' => 299, 'code' => 'VIP299'])->assertOk();
+        $this->putJson("/api/v1/admin/coupons/{$deal->id}", ['type' => 'Coupon Code'])->assertUnprocessable()->assertJsonValidationErrors('code');
+        $this->putJson("/api/v1/admin/coupons/{$deal->id}", ['type' => 'Coupon Code', 'code' => 'VIP299'])->assertOk();
     }
 
     public function test_settings_drop_retired_fields_and_groups(): void
     {
         $this->actingAsAdmin();
-        // The single-vendor group was replaced by brand feeds; old rows are ignored, never sent back.
+        // Retired: the single-vendor group, the shop switch, the payment problem alerts and the old currency field.
         Setting::create(['key' => 'vendor', 'value' => ['api_key' => 'eyJpdiI6ImJyb2tlbiJ9']]);
-        Setting::create(['key' => 'general', 'value' => ['site_name' => 'Shop', 'currency' => 'EUR']]);
+        Setting::create(['key' => 'general', 'value' => ['site_name' => 'Shop', 'currency' => 'EUR', 'shop_enabled' => true]]);
+        Setting::create(['key' => 'notifications', 'value' => ['email' => true, 'error_alerts' => true]]);
 
         $this->getJson('/api/v1/admin/settings')->assertOk()
             ->assertJsonMissingPath('data.vendor')
             ->assertJsonMissingPath('data.general.currency')
-            ->assertJsonPath('data.security.require_two_factor', false)
-            ->assertJsonPath('meta.currency', 'USD');
+            ->assertJsonMissingPath('data.general.shop_enabled')
+            ->assertJsonMissingPath('data.notifications.error_alerts')
+            ->assertJsonMissingPath('meta')
+            ->assertJsonPath('data.security.require_two_factor', false);
         $this->putJson('/api/v1/admin/settings/vendor', ['api_key' => 'x'])->assertNotFound();
     }
 
-    public function test_sales_alerts_are_emailed_only_when_the_switches_are_on(): void
+    public function test_alerts_are_emailed_only_when_the_switches_are_on(): void
     {
         Notification::fake();
         $admin = User::factory()->admin()->create();
 
-        AdminActivity::broadcast('Order #1 paid', 'email');
+        AdminActivity::broadcast('Feed failed', 'sync_alerts');
         Notification::assertSentTo($admin, AdminAlertMail::class);
 
         Setting::create(['key' => 'notifications', 'value' => ['email' => false]]);
         $this->app->forgetScopedInstances();
         Notification::fake();
 
-        AdminActivity::broadcast('Order #2 paid', 'email');
+        AdminActivity::broadcast('Feed failed again', 'sync_alerts');
         Notification::assertSentTo($admin, AdminActivity::class);
         Notification::assertNotSentTo($admin, AdminAlertMail::class);
+    }
+
+    public function test_reset_links_open_the_admin(): void
+    {
+        Notification::fake();
+        config(['services.frontend.admin_url' => 'https://admin.test']);
+        $editor = User::factory()->editor()->create();
+
+        $this->postJson('/api/v1/auth/forgot-password', ['email' => $editor->email])->assertOk();
+
+        Notification::assertSentTo($editor, ResetPassword::class,
+            fn (ResetPassword $n) => str_starts_with($n->toMail($editor)->actionUrl, 'https://admin.test/#/reset-password?token='));
     }
 
     public function test_production_seeding_creates_only_the_admin(): void
@@ -136,13 +140,16 @@ class AccountSecurityTest extends TestCase
         $this->assertSame(0, Coupon::count());
     }
 
-    public function test_local_seeding_adds_demo_data_and_the_test_customer(): void
+    public function test_local_seeding_adds_demo_data_only_once(): void
     {
         config(['services.admin.password' => 'Admin1234']);
 
         $this->seed(DatabaseSeeder::class);
+        $coupons = Coupon::count();
+        $this->seed(DatabaseSeeder::class);
 
-        $this->assertTrue(User::where('email', 'tauseefchoohan0401@gmail.com')->exists());
-        $this->assertGreaterThan(0, Coupon::count());
+        $this->assertGreaterThan(0, $coupons);
+        $this->assertSame($coupons, Coupon::count());
+        $this->assertSame(1, User::count());
     }
 }

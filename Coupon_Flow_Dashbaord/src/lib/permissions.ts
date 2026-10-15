@@ -4,7 +4,7 @@ import type { StaffRole, User } from './types';
  * What each staff role may do (the API enforces the same rules; this only hides what would fail):
  * - read:  every staff member (viewer, editor, admin)
  * - write: editors and admins: stores, coupons, blogs, categories, feeds (run / import)
- * - admin: admins only: settings, staff, activity log, refunds, feed setup, permanent deletes
+ * - admin: admins only: settings, staff, activity log, feed setup, permanent deletes
  */
 export type Permission = 'read' | 'write' | 'admin';
 
@@ -23,7 +23,7 @@ export function allows(role: User['role'] | undefined, permission: Permission): 
 }
 
 export const ROLE_LABELS: Record<StaffRole, { label: string; description: string }> = {
-  admin: { label: 'Admin', description: 'Everything, including settings, staff, refunds and the activity log.' },
-  editor: { label: 'Editor', description: 'Stores, coupons, blogs and brand feeds. No settings, staff or money.' },
+  admin: { label: 'Admin', description: 'Everything, including settings, staff and the activity log.' },
+  editor: { label: 'Editor', description: 'Stores, coupons, blogs and brand feeds. No settings or staff.' },
   viewer: { label: 'Viewer', description: 'Read-only: dashboard, lists and reports.' },
 };

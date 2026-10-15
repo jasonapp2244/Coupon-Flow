@@ -1,18 +1,16 @@
 import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
-import { AlertTriangle, Bell, CalendarClock, CalendarPlus, Gauge, History, MousePointerClick, Plug, ShieldAlert, Tag } from 'lucide-react';
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Badge, Button, Card, SectionTitle, statusBadge } from '../components/ui';
+import { AlertTriangle, BadgeCheck, Bell, DollarSign, CalendarClock, CalendarPlus, Gauge, History, MousePointerClick, Plug, ShieldAlert, Tag } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Button, Card, SectionTitle, statusBadge } from '../components/ui';
 import { FormLoadState } from '../components/FormParts';
 import { StateBadge, UsageBar } from '../components/CouponUsage';
 import { useApi } from '../lib/hooks';
-import { date, dateTime, dateTimeFull, money, number, timeAgo, timeUntil, tooltipMoney, tooltipNumber } from '../lib/format';
+import { date, dateTimeFull, money, number, timeAgo, timeUntil, tooltipNumber } from '../lib/format';
 import { useApp, useCan } from '../store/AppContext';
-import type { AnalyticsData, CouponUsage, DashboardData, SalesPoint } from '../lib/types';
+import type { AnalyticsData, CouponUsage, DashboardData } from '../lib/types';
 
 const RANGES = [{ label: '7 Days', days: 7 }, { label: '30 Days', days: 30 }, { label: '3 Months', days: 90 }];
-const SALES_METRICS = { Orders: { key: 'orders', color: '#2563EB' }, Revenue: { key: 'revenue', color: '#10B981' } } as const;
-type SalesMetric = keyof typeof SALES_METRICS;
 
 const tooltipStyle = { background: '#0F172A', border: 'none', borderRadius: 8, color: '#F1F5F9', fontSize: 12 };
 const shortDate = (d: string) => date(d).replace(/, \d{4}$/, '');
@@ -80,52 +78,6 @@ function UsesChart() {
   );
 }
 
-function SalesChart() {
-  const [days, setDays] = useState(30);
-  const [metric, setMetric] = useState<SalesMetric>('Revenue');
-  const { data, loading } = useApi<AnalyticsData>(`/admin/analytics?days=${days}`);
-  const { key, color } = SALES_METRICS[metric];
-  const rows = (data?.sales ?? []).map((p: SalesPoint) => ({ date: shortDate(p.date), orders: p.orders, revenue: p.revenue_cents / 100 }));
-  const empty = rows.every(r => r.orders === 0);
-
-  return (
-    <Card className="xl:col-span-2" padding={false}>
-      <div className="p-5 pb-0">
-        <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
-          <div>
-            <h2 className="text-base font-semibold text-slate-800">Exclusive Code Sales</h2>
-            <p className="text-xs text-slate-400 mt-0.5">Paid orders over the selected period</p>
-          </div>
-          <RangeButtons days={days} onChange={setDays} />
-        </div>
-        <div className="flex gap-1 mb-4">
-          {(Object.keys(SALES_METRICS) as SalesMetric[]).map(m => (
-            <button key={m} onClick={() => setMetric(m)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${metric === m ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:text-slate-700'}`}>{m}</button>
-          ))}
-        </div>
-      </div>
-      <div className={`px-2 pb-4 relative transition-opacity ${loading ? 'opacity-50' : ''}`}>
-        {empty && !loading && <p className="absolute inset-0 flex items-center justify-center text-xs text-slate-400 z-10">No paid orders in this period yet</p>}
-        <ResponsiveContainer width="100%" height={220}>
-          <AreaChart data={rows} margin={{ top: 0, right: 16, left: -8, bottom: 0 }}>
-            <defs>
-              <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={color} stopOpacity={0.15} />
-                <stop offset="95%" stopColor={color} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-            <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} minTickGap={24} />
-            <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} allowDecimals={metric === 'Revenue'} />
-            <Tooltip contentStyle={tooltipStyle} formatter={metric === 'Revenue' ? tooltipMoney : tooltipNumber} />
-            <Area type="monotone" dataKey={key} name={metric} stroke={color} strokeWidth={2} fill="url(#salesGrad)" dot={false} activeDot={{ r: 4, fill: color }} />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-    </Card>
-  );
-}
-
 /** A short list of coupons with their usage, deal times and a link to edit. */
 function CouponList({ title, hint, coupons, empty, show, onOpen }: {
   title: string; hint: string; coupons: CouponUsage[]; empty: string; show: 'usage' | 'ends' | 'starts'; onOpen: (id: number) => void;
@@ -175,7 +127,7 @@ export default function Dashboard() {
     );
   }
 
-  const { usage, kpis } = data;
+  const { usage } = data;
   const feedsOk = usage.feeds_total - usage.feeds_failing;
   const cards = [
     { label: 'Live Coupons', value: number(usage.live), hint: `${number(usage.scheduled)} scheduled · ${number(usage.used_up)} used up`, icon: <Tag size={18} />, color: 'bg-emerald-100 text-emerald-600', path: '/coupons?state=live' },
@@ -183,9 +135,10 @@ export default function Dashboard() {
     { label: 'Uses, Last 7 Days', value: number(usage.uses_7d), hint: `${number(usage.uses_30d)} in 30 days`, icon: <History size={18} />, color: 'bg-sky-100 text-sky-600', path: '/analytics' },
     { label: 'Nearly Used Up', value: number(usage.near_limit), hint: '80% or more of their limit', icon: <Gauge size={18} />, color: 'bg-amber-100 text-amber-600', path: '/coupons?near=1', alert: usage.near_limit > 0 },
     { label: 'Ending in 48 Hours', value: number(usage.ending_48h), hint: `${number(usage.ended)} ended so far`, icon: <CalendarClock size={18} />, color: 'bg-rose-100 text-rose-600', path: '/coupons?state=live' },
+    { label: 'Profit (30 days)', value: money(data.kpis.profit_30d_cents ?? 0), hint: 'Commission on confirmed sales', icon: <DollarSign size={18} />, color: 'bg-emerald-100 text-emerald-700', path: '/redemptions' },
+    { label: 'Sales (30 days)', value: number(data.kpis.sales_30d ?? 0), hint: 'Confirmed on Redemptions', icon: <BadgeCheck size={18} />, color: 'bg-indigo-100 text-indigo-600', path: '/redemptions' },
     { label: 'Brand Feeds OK', value: usage.feeds_total ? `${feedsOk} / ${usage.feeds_total}` : '—', hint: usage.feeds_failing ? `${usage.feeds_failing} need attention` : 'All imports fine', icon: <Plug size={18} />, color: 'bg-violet-100 text-violet-600', path: '/feeds', alert: usage.feeds_failing > 0 },
   ];
-  const topStores = data.top_stores.map(s => ({ name: s.store, revenue: s.revenue_cents / 100 }));
 
   return (
     <div className="space-y-6">
@@ -202,7 +155,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map(c => <Kpi key={c.label} {...c} onClick={() => navigate(c.path)} />)}
       </div>
 
@@ -296,57 +249,6 @@ export default function Dashboard() {
           </div>
         </Card>
       </div>
-
-      {data.shop_enabled && (
-        <>
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-            <SalesChart />
-            <Card padding={false}>
-              <div className="p-5 pb-0">
-                <h2 className="text-base font-semibold text-slate-800">Top Stores by Sales</h2>
-                <p className="text-xs text-slate-400 mt-0.5">{money(kpis.revenue_cents)} from {number(kpis.paid_orders)} paid orders in total</p>
-              </div>
-              <div className="px-2 py-4">
-                {topStores.length === 0 ? <p className="h-[220px] flex items-center justify-center text-xs text-slate-400">No sales yet</p> : (
-                  <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={topStores} layout="vertical" margin={{ top: 0, right: 16, left: 8, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" horizontal={false} />
-                      <XAxis type="number" tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                      <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#475569' }} axisLine={false} tickLine={false} width={72} />
-                      <Tooltip contentStyle={tooltipStyle} formatter={tooltipMoney} />
-                      <Bar dataKey="revenue" name="Revenue" fill="#10B981" radius={[0, 3, 3, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
-            </Card>
-          </div>
-
-          <Card padding={false}>
-            <div className="p-5 pb-3 border-b border-slate-100 flex items-center justify-between">
-              <SectionTitle>Recent Orders</SectionTitle>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/orders')}>View all</Button>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead><tr className="text-xs text-slate-400 font-medium border-b border-slate-100">{['Order', 'Customer', 'Total', 'Status', 'Date'].map(h => <th key={h} className="px-5 py-3 text-left whitespace-nowrap">{h}</th>)}</tr></thead>
-                <tbody>
-                  {data.recent_orders.length === 0 && <tr><td colSpan={5} className="px-5 py-10 text-center text-xs text-slate-400">No orders yet.</td></tr>}
-                  {data.recent_orders.map(o => (
-                    <tr key={o.id} className="border-b border-slate-50 hover:bg-slate-50 cursor-pointer last:border-0" onClick={() => navigate('/orders')}>
-                      <td className="px-5 py-3"><code className="text-xs font-mono text-blue-600">#{o.id}</code></td>
-                      <td className="px-5 py-3 text-slate-700 text-xs">{o.email}</td>
-                      <td className="px-5 py-3 font-semibold text-slate-800">{money(o.total_cents, o.currency)}</td>
-                      <td className="px-5 py-3"><Badge variant={o.status === 'paid' ? 'success' : o.status === 'pending' ? 'warning' : 'neutral'}>{o.status}</Badge></td>
-                      <td className="px-5 py-3 text-xs text-slate-500 whitespace-nowrap">{dateTime(o.created_at)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </>
-      )}
 
       <div className="flex items-center gap-2 text-xs text-slate-400">
         <CalendarPlus size={12} /> Coupons with a start time go live and come down on their own; nothing needs to be switched by hand.

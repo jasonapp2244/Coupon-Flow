@@ -65,7 +65,7 @@ class ActivityLogTest extends TestCase
         $coupon = Coupon::factory()->create();
         ActivityLog::query()->delete();
 
-        $coupon->update(['stock' => 3]);
+        $coupon->update(['title' => 'Changed by a non-staff request']);
         $this->assertSame(0, ActivityLog::count());
     }
 

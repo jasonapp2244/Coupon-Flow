@@ -1,6 +1,6 @@
 # Project State — Coupon Follow
 
-_Last updated: 2026-10-07_
+_Last updated: 2026-10-15_
 
 **Repository:** one git repo at `F:\React_project` (backend, admin and website as subfolders, root `README.md` +
 `.gitignore`), pushed to https://github.com/jasonapp2244/Coupon-Flow (branch `main`, first commit `976466f`,
@@ -13,8 +13,93 @@ _Last updated: 2026-10-07_
 | 1 | Laravel backend + Stripe (this repo) | ✅ Done |
 | 2 | React admin wired to this API | ✅ Done |
 | 3 | Public website (`../Coupon_Flow_Website`) | ✅ Done — see below |
-| 4 | Payments go-live (Stripe test keys → real card test, live keys, go-live checklist) | ✅ Test mode fully verified incl. webhooks + 3DS; live keys at go-live (Phase 5) |
+| 4 | Payments go-live (Stripe) | ❌ Removed 2026-10-15 at the user's request (see below); no payments at all |
 | 5 | Audit fixes, public site redesign, full test, SiteGround deploy | 🟡 Code, tests and release packaging done; live upload waits on user inputs (see TODO) |
+
+## Follow-up — code lists + commission profit (2026-10-15)
+Plan: `~/.claude/plans/i-want-to-vistoer-shiny-teacup.md`. Client: each click gets the next code of a list; a visitor
+may take several (refresh keeps the same code, "Get another code" takes the next) up to a daily limit; profit =
+order amount × commission %, added when the admin confirms the sale.
+- **Migration** `2026_10_16_100000_add_code_lists_and_commission`:
+  - coupons: `unique_codes`, `max_codes_per_visitor` (default 5, 0 = no limit), `commission_percent`.
+  - stores: `commission_percent`.
+  - redemptions: `claim_token` (sha256, unique per coupon), `visitor_hash` (HMAC IP+UA), `commission_percent`.
+  - new table `coupon_codes` (coupon_id, code, redemption_id unique, assigned_at).
+- **Code list = usage limit:** `usage_limit` = number of codes, `uses_count` = handed out (`Coupon::syncCodeCounts`).
+  Existing rules (hidden when used up, "X left", 80% alert, sort by %) apply unchanged.
+- **`ClickOut::claim(coupon, token, visitor, user)`** replaces `record()`:
+  - idempotent per token, so `/go` and `/reveal` can race;
+  - the daily limit per visitor_hash is checked over the last 24 h;
+  - code assignment is a conditional update (no double hand-out); a unique-token race is caught.
+  - `/api/go/{id}?t=` and `public/coupons/{id}/reveal?t=` both call it; reveal returns `code` + `limit_reached`.
+  - Shared-code coupons behave as before. Public JSON has `code_list`, never list codes.
+- **Admin API:**
+  - `admin/coupons/{coupon}/codes`: GET for all staff; POST (paste or CSV) and DELETE of free codes for admin+editor.
+  - `PATCH admin/redemptions/{id}` (Confirm sale; admin+editor): {status Used|Failed|Pending, order_value $}. The rate is
+    the coupon override, else the store's; it is copied onto the redemption. Logged as `sale_confirmed`.
+  - Summary: `conversion_rate`. Dashboard kpis: `sales_30d`, `profit_30d_cents`. Analytics: `profit_by_store`.
+    CSV: Date, Coupon uses, Sales, Profit.
+  - `reset-uses` is refused for code lists (add codes instead).
+- **`redemptions:expire`** (daily 03:15): Clicked older than 30 days → Expired.
+- **Admin UI** (helper agent):
+  - store Commission %; coupon Code delivery (shared / code list), max per visitor/day, Commission %;
+  - Codes card (`components/CouponCodes.tsx`: add, upload, Free/Used list, delete free);
+  - Redemptions: Confirm/Edit sale modal, Rate + Profit columns, Profit Earned + Conversion cards;
+  - Dashboard: Profit/Sales (30 days) cards. Analytics: Profit by Store table.
+- **Website:** `lib/out.ts` tokens (`newClaimToken`, `latestToken`, `rememberToken`, sessionStorage `cf_claim_{id}`);
+  each row click is a new token; the pop-up has "Get another code" and the limit message; rows show "N codes left".
+- **Local DB:** migrated after a dump (`storage/app/backups/coupon_follow-before-code-lists.sql`).
+  - Demo left from the browser test: store "Demo Code List Store" (8%) with coupon #14 (3 codes, all handed out;
+    DEMO-0001 confirmed at $150 → $12.00).
+  - Coupon #13 (an earlier test run) is in Trash.
+
+## Follow-up — paid coupons removed from backend and admin (2026-10-15)
+User: "remove paid from admin and backend". The product is now a free coupon/deal site; only staff sign in.
+- **Deleted (backend):** Stripe webhook route/controller/handler, `CheckoutService`, `StockReservation`,
+  `OrderFulfillment`, `CouponCodePool`, `stripe:check` + `orders:reconcile` commands (and the schedule entry),
+  `Order`/`OrderItem`/`CouponCode`/`StripeEvent` models, `OrderStatus`, `OrderResource`, `OrderPaidMail` + view,
+  Admin `OrderController`/`CouponCodeController`, Customer `OrderController`, `OrderFactory`, `FakeStripeHttpClient`,
+  tests `CheckoutTest`/`StripeSetupCheckTest`/`UniqueCodesTest`/`ShopSwitchTest`; `stripe/stripe-php` (composer
+  remove); `services.stripe` config; `STRIPE_*`/`STORE_CURRENCY` from `.env.example` and the production template.
+- **Accounts:** `auth/register`, email verification routes and `MustVerifyEmail` removed; login refuses non-staff
+  (same "Incorrect email or password."); forgot-password only mails staff; reset links always open the admin;
+  profile email change no longer sends a confirmation link. `Role::Customer` stays so old rows still load.
+- **Coupons:** `price_cents`, `stock`, `unique_codes` gone (model, request, admin + public resources, filters, sorts);
+  "Coupon Code" type still needs a code. Public JSON no longer has `is_paid`/`price_cents`/`currency`/`in_stock`;
+  public settings no longer have `currency`/`shop_enabled`.
+- **Dashboard/analytics:** kpis = total_stores, active_coupons, total_coupons, total_redemptions; no sales, top
+  stores, recent orders; CSV export = Date, Coupon uses. Trash purges everything (no "kept because of orders").
+- **Settings:** `general.shop_enabled` and `notifications.error_alerts` (only payment problems used it) removed;
+  settings index has no `meta.currency`.
+- **Migration** `2026_10_15_100000_drop_paid_coupons`: drops `coupon_codes`, `order_items`, `orders`,
+  `stripe_events`; deletes coupons with `price_cents > 0` (redemptions keep their rows, coupon link nulled); drops the
+  three columns; strips the two retired setting keys. down() restores the schema only. Run on the local DB
+  2026-10-15 after a dump to `storage/app/backups/coupon_follow-before-drop-paid.sql` (gitignored); local now has
+  10 coupons, the two demo paid ones are gone.
+- **Admin** (`../Coupon_Flow_Dashbaord`): Orders page + route + sidebar, `CodePool.tsx`, coupon form Pricing and
+  Code pool cards, paid column/filter/drawer rows, dashboard sales/orders widgets, analytics Sales view, Settings
+  currency block and Problem Alerts toggle, trash "kept" handling, refund/money wording all removed. Support Email
+  input no longer warns when the stored value is null.
+- **Seed data:** no test customer and no paid demo coupons any more. The test email
+  (`tauseefchoohan0401@gmail.com`) is still used by staff fixtures in tests.
+- **Website:** store page Offer JSON-LD has no price; `currency` left in `SiteSettings` type + fallback (edit
+  blocked by the permission classifier; see TODO).
+
+## Follow-up — cart removed from the website (2026-10-15)
+User: "website side not need add to cart, remove this feature".
+- **Website** (`../Coupon_Flow_Website`): no cart, checkout, sign-in, account or orders pages any more, and no
+  shop branches anywhere. `App.tsx` has no `ShopOnly`/auth/cart/purchases providers; old paths (`/cart`, `/login`,
+  `/register`, password pages, `/verify-email`, `/checkout/*`, `/account/*`, `/refund-policy`) redirect home.
+  `CouponTicket` has one action (Show coupon code / Get deal); header has no cart icon or account menu; footer,
+  home, coupons filters (no free/exclusive chips, no price sort) and info pages carry only the free-site wording;
+  Refund policy page dropped (and from sitemap/pre-render). `SiteSettings` no longer has `shop_enabled`/`ready`.
+- Shop files deleted at the user's request (Cart, Checkout, Auth, Account, Orders pages; cart/purchases/auth stores;
+  OrderCodes). `lib/api.ts` is now public-only (no bearer token, no `put`/`getAbsolute`); `User`/`Order*` types,
+  `Coupon.is_paid` and `money()` removed. `price_cents`/`currency`/`in_stock` stay for the store page Offer JSON-LD.
+- **Admin**: Settings → General "Sell Exclusive Codes" toggle removed; coupon form warns that paid coupons never show on
+  the website. Local DB: `general.shop_enabled` set **off** via the admin API (default is off anyway).
+- **Backend unchanged**: Stripe/orders/checkout code and the `shop_enabled` setting stay (tests use `enableShop()`);
+  with the setting off, paid coupons are hidden from every public endpoint and `POST checkout` is 403.
 
 ## Follow-up — brand feeds, usage limits, deal windows, secure staff admin (2026-10-06)
 Plan: `~/.claude/plans/make-sephora-nike-best-lazy-petal.md`. User choices: brand data by feed/CSV (no brand login),
@@ -61,10 +146,12 @@ usage limit + % used (hide at 0), exact date+time window, and 2FA + staff roles 
 - Fixed on the way: creating a store or blog without `status` returned 500 (DB default not read back).
 - Demo data: fake sync runs removed; "Demo Brand (CSV upload)" feed; Amazon 20% has a 500-use limit; the CSV
   template's "The Loaded Tea Shop" store + 2 coupons were imported in the browser test and left live as demo.
-- Local DB only (2026-10-06, later): "Sell Exclusive Codes" switched **on**, and two demo paid coupons added via the
-  admin API (not in `DemoSeeder`): #11 Nike "Exclusive: Extra 25% Off Nike Members Sale" $2.99 and #12 Sephora
-  "Exclusive: $20 Off $75 at Sephora" $1.99, both unique-code pools of 10 random codes (`NIKEX25-…`, `SEPH20-…`).
-  A re-seed or fresh DB loses them and turns the shop back off.
+- Demo paid coupons (2026-10-07, `DemoSeeder::seedPaidCoupons`): Nike "Exclusive: Extra 25% Off Nike Members Sale"
+  $2.99 and Sephora "Exclusive: $20 Off $75 at Sephora" $1.99, unique-code pools `NIKEX25-0001..0010` /
+  `SEPH20-0001..0010`. Re-running the seeder keeps stock and skips existing codes. They only show on the site while
+  "Sell Exclusive Codes" is on (the seeder leaves that setting alone; default off).
+- Local DB: #11/#12 above were first created via the admin API (2026-10-06) with 10 random codes each; the seeder
+  hasn't been re-run there, so a re-seed would add the 10 numbered codes on top. Shop switch off since 2026-10-15.
 
 ## Follow-up — simple coupon site: shop switch, one row layout, #coupon_code pop-up (2026-10-05)
 Client: no cart / checkout / sign-in anywhere; every coupon is "Show coupon code" or "Get deal" → store opens in a new

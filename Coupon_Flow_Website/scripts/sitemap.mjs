@@ -7,7 +7,7 @@ import { env, getJson } from './env.mjs'
 const site = env('VITE_SITE_URL').replace(/\/$/, '')
 if (!site) throw new Error('VITE_SITE_URL is not set')
 
-const pages = ['/', '/coupons', '/stores', '/categories', '/blog', '/about', '/contact', '/refund-policy', '/terms', '/privacy', '/affiliate-disclosure']
+const pages = ['/', '/coupons', '/stores', '/categories', '/blog', '/about', '/contact', '/terms', '/privacy', '/affiliate-disclosure']
   .map(path => ({ path, lastmod: null }))
 
 try {

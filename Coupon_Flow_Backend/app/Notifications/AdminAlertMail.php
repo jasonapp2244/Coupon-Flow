@@ -9,8 +9,8 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Email copy of an important admin alert (orders, refunds, disputes, payment problems).
- * Queued so a slow mail server never delays a Stripe webhook response.
+ * Email copy of an important admin alert (brand feed problems, coupons running out of uses).
+ * Queued so a slow mail server never delays the request that raised it.
  */
 class AdminAlertMail extends Notification implements ShouldQueue
 {
@@ -34,6 +34,6 @@ class AdminAlertMail extends Notification implements ShouldQueue
         return (new MailMessage)
             ->subject("{$site}: {$this->text}")
             ->line($this->text)
-            ->action('Open the admin dashboard', config('services.frontend.admin_url').'/#/orders');
+            ->action('Open the admin dashboard', config('services.frontend.admin_url').'/#/');
     }
 }

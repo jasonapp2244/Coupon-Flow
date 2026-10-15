@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Logs create / update / delete / restore of a catalogue model to the activity log when staff
- * (or the system) makes the change. Shoppers' side effects (e.g. checkout stock) are not logged.
+ * (or the system) makes the change. Shoppers' side effects (e.g. click counts) are not logged.
  * A model can list fields to leave out in `$auditIgnore`.
  */
 trait LogsActivity

@@ -10,8 +10,11 @@ class Redemption extends Model
 {
     protected $fillable = [
         'reference', 'user_name', 'coupon_id', 'coupon_code', 'store_id', 'order_value_cents', 'commission_cents',
-        'clicked_at', 'redeemed_at', 'status', 'tracking_id',
+        'clicked_at', 'redeemed_at', 'status', 'tracking_id', 'claim_token', 'visitor_hash', 'commission_percent',
     ];
+
+    /** Never sent anywhere: they identify a browser's click and a visitor. */
+    protected $hidden = ['claim_token', 'visitor_hash'];
 
     protected function casts(): array
     {
@@ -19,6 +22,7 @@ class Redemption extends Model
             'status' => RedemptionStatus::class,
             'order_value_cents' => 'integer',
             'commission_cents' => 'integer',
+            'commission_percent' => 'float',
             'clicked_at' => 'datetime',
             'redeemed_at' => 'datetime',
         ];
@@ -27,5 +31,10 @@ class Redemption extends Model
     public function store(): BelongsTo
     {
         return $this->belongsTo(Store::class)->withTrashed();
+    }
+
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(Coupon::class)->withTrashed();
     }
 }

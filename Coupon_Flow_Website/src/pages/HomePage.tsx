@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { BadgeCheck, Copy, CreditCard, Gift, Mail } from 'lucide-react';
+import { BadgeCheck, Copy, Gift } from 'lucide-react';
 import CouponTicket from '../components/CouponTicket';
 import { SearchBox } from '../components/Layout';
 import { ErrorState, Spinner, StoreCard } from '../components/States';
@@ -20,7 +20,7 @@ function HeroTickets({ coupons }: { coupons: Coupon[] }) {
         return (
           <div key={c.id}
             className={`absolute flex w-[26rem] overflow-hidden rounded-xl bg-card shadow-xl ring-1 ring-line ${i === 0 ? 'left-0 top-6 -rotate-3' : 'left-14 top-40 rotate-2'}`}>
-            <div className={`flex w-32 flex-col items-center justify-center py-7 ${c.is_paid ? 'bg-ink text-marigold' : 'bg-marigold text-ink'}`}>
+            <div className="flex w-32 flex-col items-center justify-center bg-marigold py-7 text-ink">
               <span className="font-display text-4xl font-extrabold leading-none">{figure}</span>
               <span className="text-sm">{caption}</span>
             </div>
@@ -44,13 +44,7 @@ function SectionHead({ id, title, link, linkText }: { id: string; title: string;
   );
 }
 
-const shopSteps = [
-  ['Add the code to your cart', 'Exclusive codes show their price on the ticket. Nothing is charged until you check out.'],
-  ['Pay by card', 'Checkout runs on Stripe, so your card details go straight to them. We never see your card number.'],
-  ['Get your code', 'It appears on screen as soon as payment clears and is emailed to you. It stays in My orders too.'],
-];
-
-const freeSteps = [
+const steps = [
   ['Find your store', 'Search for a store or browse a category to see its live coupon codes and deals.'],
   ['Click "Show coupon code"', 'The store opens in a new tab, and the code waits for you here in a pop-up. Deals need no code.'],
   ['Copy and save', 'Click the code to copy it, then paste it at the store\'s checkout. No sign-up, no payment, nothing to install.'],
@@ -58,9 +52,7 @@ const freeSteps = [
 
 export default function HomePage() {
   const site = useSite();
-  const shop = site.shop_enabled;
   const featured = useApi<Paginated<Coupon>>('/public/coupons?featured=1&per_page=6');
-  const exclusive = useApi<Paginated<Coupon>>(shop ? '/public/coupons?paid=1&per_page=2' : null);
   const stores = useApi<Paginated<Store>>('/public/stores?top=1&per_page=8');
   const categories = useApi<{ data: Category[] }>('/public/categories?type=store');
   const blogs = useApi<Paginated<Blog>>('/public/blogs?per_page=3');
@@ -82,7 +74,6 @@ export default function HomePage() {
   const featuredCoupons = featured.data?.data ?? [];
   const topStores = stores.data?.data ?? [];
   const categoryList = (categories.data?.data ?? []).filter(c => (c.items_count ?? 0) > 0);
-  const paidCoupons = exclusive.data?.data ?? [];
 
   return (
     <>
@@ -93,9 +84,7 @@ export default function HomePage() {
               Codes that still work, for the stores you already shop.
             </h1>
             <p className="mt-5 max-w-lg text-lg text-ink-soft">
-              {shop
-                ? 'Free codes are free to copy. Exclusive codes cost a little and are yours the moment you pay.'
-                : 'Click "Show coupon code", shop in the new tab, and paste the code at checkout. Always free, no sign-up.'}
+              Click "Show coupon code", shop in the new tab, and paste the code at checkout. Always free, no sign-up.
             </p>
             <div className="mt-8 max-w-xl"><SearchBox size="lg" /></div>
             {topStores.length > 0 && (
@@ -114,17 +103,8 @@ export default function HomePage() {
       <section className="border-b border-line bg-paper" aria-label="Why shop with us">
         <ul className="page grid gap-4 py-6 text-sm sm:grid-cols-3">
           <li className="flex items-center gap-3"><BadgeCheck className="shrink-0 text-deal" size={22} aria-hidden="true" /><span><span className="font-semibold">Verified codes.</span> The badge means our team has tested the code.</span></li>
-          {shop ? (
-            <>
-              <li className="flex items-center gap-3"><CreditCard className="shrink-0 text-deal" size={22} aria-hidden="true" /><span><span className="font-semibold">Secure card payments.</span> Handled by Stripe, never stored by us.</span></li>
-              <li className="flex items-center gap-3"><Mail className="shrink-0 text-deal" size={22} aria-hidden="true" /><span><span className="font-semibold">Codes by email.</span> Bought codes are emailed and kept in your account.</span></li>
-            </>
-          ) : (
-            <>
-              <li className="flex items-center gap-3"><Copy className="shrink-0 text-deal" size={22} aria-hidden="true" /><span><span className="font-semibold">One click to copy.</span> The code waits for you when you come back.</span></li>
-              <li className="flex items-center gap-3"><Gift className="shrink-0 text-deal" size={22} aria-hidden="true" /><span><span className="font-semibold">Always free.</span> No sign-up, no payment, nothing to install.</span></li>
-            </>
-          )}
+          <li className="flex items-center gap-3"><Copy className="shrink-0 text-deal" size={22} aria-hidden="true" /><span><span className="font-semibold">One click to copy.</span> The code waits for you when you come back.</span></li>
+          <li className="flex items-center gap-3"><Gift className="shrink-0 text-deal" size={22} aria-hidden="true" /><span><span className="font-semibold">Always free.</span> No sign-up, no payment, nothing to install.</span></li>
         </ul>
       </section>
 
@@ -165,14 +145,14 @@ export default function HomePage() {
       )}
 
       <section className="page pt-16" aria-labelledby="how-heading">
-        <div className={`grid gap-10 rounded-2xl bg-ink px-6 py-10 text-white sm:px-10 lg:items-center ${shop ? 'lg:grid-cols-[1fr_1.1fr]' : ''}`}>
+        <div className="rounded-2xl bg-ink px-6 py-10 text-white sm:px-10">
           <div>
-            <h2 id="how-heading" className="font-display text-3xl font-extrabold tracking-tight">{shop ? 'Exclusive codes, sold once' : 'How it works'}</h2>
+            <h2 id="how-heading" className="font-display text-3xl font-extrabold tracking-tight">How it works</h2>
             <p className="mt-3 max-w-md text-white/75">
-              {shop ? "Some stores give us codes that aren't published anywhere else. Buy one and it's yours to use." : 'Three steps from finding a code to saving at the checkout.'}
+              Three steps from finding a code to saving at the checkout.
             </p>
             <ol className="mt-8 flex flex-col gap-6">
-              {(shop ? shopSteps : freeSteps).map(([title, text], i) => (
+              {steps.map(([title, text], i) => (
                 <li key={title} className="flex gap-4">
                   <span className="font-display text-4xl font-extrabold leading-none text-marigold" aria-hidden="true">{i + 1}</span>
                   <span>
@@ -182,15 +162,10 @@ export default function HomePage() {
                 </li>
               ))}
             </ol>
-            <Link to={shop ? '/coupons?kind=paid' : '/stores'} className="mt-8 inline-flex items-center rounded-lg bg-marigold px-5 py-2.5 text-sm font-semibold text-ink hover:bg-white">
-              {shop ? 'Browse exclusive codes' : 'Find your store'}
+            <Link to="/stores" className="mt-8 inline-flex items-center rounded-lg bg-marigold px-5 py-2.5 text-sm font-semibold text-ink hover:bg-white">
+              Find your store
             </Link>
           </div>
-          {shop && paidCoupons.length > 0 && (
-            <div className="flex flex-col gap-4 text-ink [--notch:var(--color-ink)]">
-              {paidCoupons.map(c => <CouponTicket key={c.id} coupon={c} />)}
-            </div>
-          )}
         </div>
       </section>
 

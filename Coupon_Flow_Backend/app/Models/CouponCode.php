@@ -2,14 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/** One code in a paid coupon's pool; each is sold to exactly one buyer. */
+/** One code in a coupon's code list. A click takes the oldest free one; it is never handed out again. */
 class CouponCode extends Model
 {
-    protected $fillable = ['coupon_id', 'code', 'order_item_id', 'assigned_at'];
+    protected $fillable = ['coupon_id', 'code', 'redemption_id', 'assigned_at'];
 
     protected function casts(): array
     {
@@ -18,16 +17,11 @@ class CouponCode extends Model
 
     public function coupon(): BelongsTo
     {
-        return $this->belongsTo(Coupon::class)->withTrashed();
+        return $this->belongsTo(Coupon::class);
     }
 
-    public function orderItem(): BelongsTo
+    public function redemption(): BelongsTo
     {
-        return $this->belongsTo(OrderItem::class);
-    }
-
-    public function scopeAvailable(Builder $query): void
-    {
-        $query->whereNull('order_item_id');
+        return $this->belongsTo(Redemption::class);
     }
 }

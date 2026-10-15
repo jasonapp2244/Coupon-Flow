@@ -2,12 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Enums\OrderStatus;
 use App\Models\ActivityLog;
 use App\Models\Blog;
 use App\Models\Category;
 use App\Models\Coupon;
-use App\Models\Order;
 use App\Models\Redemption;
 use App\Models\Store;
 use App\Models\SyncRun;
@@ -100,20 +98,15 @@ class AdminCatalogTest extends TestCase
         $this->assertSame('Draft', $coupon->fresh()->status->value);
     }
 
-    public function test_sold_coupons_cannot_be_purged_from_trash(): void
+    public function test_trash_can_be_purged_one_item_or_all(): void
     {
-        $sold = Coupon::factory()->paid()->create();
-        $unsold = Coupon::factory()->create();
-        $order = Order::factory()->create(['status' => OrderStatus::Paid, 'total_cents' => 499]);
-        $order->items()->create(['coupon_id' => $sold->id, 'title_snapshot' => 'x', 'unit_price_cents' => 499]);
-        $sold->delete();
-        $unsold->delete();
+        [$one, $two, $three] = Coupon::factory()->count(3)->create()->each->delete()->all();
 
-        $this->deleteJson("/api/v1/admin/trash/coupon/{$sold->id}")->assertStatus(409);
+        $this->deleteJson("/api/v1/admin/trash/coupon/{$one->id}")->assertOk();
+        $this->assertNull(Coupon::withTrashed()->find($one->id));
 
-        $this->deleteJson('/api/v1/admin/trash')->assertOk()->assertJson(['purged' => 1, 'kept' => 1]);
-        $this->assertNotNull(Coupon::withTrashed()->find($sold->id));
-        $this->assertNull(Coupon::withTrashed()->find($unsold->id));
+        $this->deleteJson('/api/v1/admin/trash')->assertOk()->assertExactJson(['message' => '2 item(s) deleted.', 'purged' => 2]);
+        $this->assertSame(0, Coupon::withTrashed()->whereKey([$two->id, $three->id])->count());
     }
 
     public function test_coupon_validation_rules(): void
@@ -121,13 +114,14 @@ class AdminCatalogTest extends TestCase
         $store = Store::factory()->create();
 
         $this->postJson('/api/v1/admin/coupons', [
-            'store_id' => $store->id, 'title' => 'x', 'type' => 'Coupon Code', 'price_cents' => 20,
-        ])->assertJsonValidationErrors(['code', 'price_cents']);
+            'store_id' => $store->id, 'title' => 'x', 'type' => 'Coupon Code',
+        ])->assertJsonValidationErrors(['code']);
 
+        // Retired paid-coupon fields are ignored.
         $this->postJson('/api/v1/admin/coupons', [
             'store_id' => $store->id, 'title' => '20% off', 'type' => 'Coupon Code', 'code' => 'SAVE20',
             'price_cents' => 299, 'stock' => 10, 'expires_at' => now()->addWeek()->toDateString(), 'status' => 'Active',
-        ])->assertCreated()->assertJsonPath('data.code', 'SAVE20')->assertJsonPath('data.price_cents', 299);
+        ])->assertCreated()->assertJsonPath('data.code', 'SAVE20')->assertJsonMissingPath('data.price_cents');
     }
 
     public function test_expired_coupon_filter(): void
@@ -231,11 +225,16 @@ class AdminCatalogTest extends TestCase
     {
         $this->getJson('/api/v1/admin/dashboard')
             ->assertOk()
-            ->assertJsonStructure(['kpis' => ['total_stores', 'revenue_cents'], 'sales', 'top_stores', 'recent_orders', 'recent_redemptions'])
-            ->assertJsonCount(30, 'sales');
+            ->assertJsonStructure(['kpis' => ['total_stores', 'total_redemptions'], 'uses', 'recent_redemptions'])
+            ->assertJsonCount(30, 'uses');
+
+        $this->getJson('/api/v1/admin/analytics?days=7')->assertOk()
+            ->assertJsonStructure(['uses', 'top_coupons', 'profit_by_store'])->assertJsonMissingPath('sales');
 
         $response = $this->get('/api/v1/admin/analytics/export?days=7');
         $response->assertOk()->assertHeader('content-type', 'text/csv; charset=UTF-8');
-        $this->assertStringStartsWith('Date,"Coupon uses","Paid orders",Revenue', $response->streamedContent());
+        $csv = $response->streamedContent();
+        $this->assertStringStartsWith("Date,\"Coupon uses\",Sales,Profit\n", $csv);
+        $this->assertCount(8, array_filter(explode("\n", $csv)));
     }
 }

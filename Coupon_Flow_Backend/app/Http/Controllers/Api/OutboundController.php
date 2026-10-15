@@ -7,6 +7,7 @@ use App\Models\Coupon;
 use App\Models\Store;
 use App\Services\ClickOut;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 /**
  * The website's only way out to a merchant. Pages link here, never to the merchant, so
@@ -15,12 +16,16 @@ use Illuminate\Http\RedirectResponse;
  */
 class OutboundController extends Controller
 {
-    public function coupon(int $id, ClickOut $clickOut): RedirectResponse
+    public function coupon(Request $request, int $id, ClickOut $clickOut): RedirectResponse
     {
-        $coupon = Coupon::publiclyVisible()->with('store')->find($id);
+        // The usage limit is checked by claim() itself: the pop-up may have taken the last code
+        // for this same token a moment before this redirect arrived.
+        $coupon = Coupon::publiclyVisible(ignoreUsage: true)->with('store')->find($id);
+        $token = $clickOut->validToken($request->query('t'));
 
-        // Outside its deal window, used up, or gone: back to the store page, no click recorded.
-        if (! $coupon || ! $clickOut->record($coupon, auth('sanctum')->user())) {
+        // Outside its deal window, used up, over the visitor's daily code limit, or gone:
+        // back to the store page, no click recorded. A token that already has its code still goes through.
+        if (! $coupon || ! $clickOut->claim($coupon, $token, $clickOut->visitorHash($request), auth('sanctum')->user())['redemption']) {
             $slug = ($coupon ?? Coupon::with('store')->find($id))?->store?->slug;
 
             return $this->toSite($slug ? "/stores/{$slug}" : '/');

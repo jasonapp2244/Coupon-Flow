@@ -29,7 +29,8 @@ class PublicSiteApiTest extends TestCase
             ->assertJsonPath('data.site_name', 'Deal Desk')
             ->assertJsonPath('data.support_email', 'help@dealdesk.test')
             ->assertJsonPath('data.meta_title', 'Deal Desk codes')
-            ->assertJsonPath('data.currency', 'usd');
+            ->assertJsonMissingPath('data.currency')
+            ->assertJsonMissingPath('data.shop_enabled');
 
         $this->assertStringNotContainsString('api_key', $response->getContent());
     }
@@ -47,13 +48,12 @@ class PublicSiteApiTest extends TestCase
         $this->assertSame([$coupon->id, $coupon->store_id, 'SAVE10', 'Tauseef'], [$click->coupon_id, $click->store_id, $click->coupon_code, $click->user_name]);
     }
 
-    public function test_click_never_reveals_a_paid_code(): void
+    public function test_a_guest_click_on_a_deal_is_recorded_without_a_code(): void
     {
-        $this->enableShop();
-        $coupon = Coupon::factory()->paid()->create(['code' => 'SECRET']);
+        $coupon = Coupon::factory()->create(['type' => 'Deal', 'code' => null]);
 
         $this->postJson("/api/v1/public/coupons/{$coupon->id}/click")->assertOk()->assertJsonPath('code', null);
-        $this->assertSame('(exclusive)', Redemption::sole()->coupon_code);
+        $this->assertSame('(deal)', Redemption::sole()->coupon_code);
         $this->assertSame('Guest', Redemption::sole()->user_name);
     }
 

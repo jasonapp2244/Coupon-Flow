@@ -3,21 +3,17 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Enums\CouponStatus;
-use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SaveCouponRequest;
 use App\Http\Resources\CouponResource;
 use App\Models\Coupon;
 use App\Notifications\AdminActivity;
 use App\Services\Audit;
-use App\Services\CouponCodePool;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 class CouponController extends Controller
 {
@@ -40,9 +36,6 @@ class CouponController extends Controller
             ->when($request->query('status'), fn ($q, $status) => $q->where('status', $status))
             ->when($request->query('type'), fn ($q, $type) => $q->where('type', $type))
             ->when($request->has('is_featured'), fn ($q) => $q->where('is_featured', $request->boolean('is_featured')))
-            ->when($request->has('is_paid'), fn ($q) => $request->boolean('is_paid')
-                ? $q->where('price_cents', '>', 0)
-                : $q->where('price_cents', 0))
             // "Ended Coupons" page: flagged expired, or past the end of the deal window.
             ->when($request->boolean('expired'), fn ($q) => $q->ended())
             ->when($request->query('state'), fn ($q, $state) => match ($state) {
@@ -67,7 +60,7 @@ class CouponController extends Controller
                 ->orderByRaw('uses_count * 1.0 / usage_limit '.($request->query('dir') === 'asc' ? 'asc' : 'desc'))
                 ->orderBy('id');
         } else {
-            $this->applySort($query, $request, ['title', 'expires_at', 'starts_at', 'updated_at', 'price_cents', 'created_at', 'uses_count']);
+            $this->applySort($query, $request, ['title', 'expires_at', 'starts_at', 'updated_at', 'created_at', 'uses_count']);
         }
 
         return CouponResource::collection($query->paginate($this->perPage($request)));
@@ -75,11 +68,8 @@ class CouponController extends Controller
 
     public function store(SaveCouponRequest $request): JsonResponse
     {
-        $data = $request->validated();
-        if (! empty($data['unique_codes'])) {
-            $data['stock'] = 0; // grows as codes are added to the pool
-        }
-        $coupon = Coupon::create($data)->refresh(); // read back DB defaults (status)
+        $coupon = Coupon::create($this->codeDelivery($request->validated(), null))->refresh(); // read back DB defaults (status)
+        $coupon->syncCodeCounts();
         AdminActivity::broadcast("New coupon \"{$coupon->title}\" was created");
 
         return (new CouponResource($coupon->load('store')))
@@ -88,35 +78,36 @@ class CouponController extends Controller
 
     public function show(Coupon $coupon): CouponResource
     {
-        return new CouponResource($this->withReserved($coupon->load('store')));
+        return new CouponResource($coupon->load('store'));
     }
 
-    public function update(SaveCouponRequest $request, Coupon $coupon, CouponCodePool $pool): CouponResource
+    public function update(SaveCouponRequest $request, Coupon $coupon): CouponResource
     {
-        DB::transaction(function () use ($request, $coupon, $pool): void {
-            $locked = Coupon::whereKey($coupon->id)->lockForUpdate()->firstOrFail();
-            $data = $request->validated();
-            $unique = (bool) ($data['unique_codes'] ?? $locked->unique_codes);
+        $coupon->update($this->codeDelivery($request->validated(), $coupon));
+        $coupon->refresh()->syncCodeCounts();
 
-            if ($unique !== $locked->unique_codes && $pool->hasOpenCheckouts($locked)) {
-                throw ValidationException::withMessages([
-                    'unique_codes' => 'A shopper is paying for this coupon right now. Change how codes are delivered once that checkout finishes (at most 30 minutes).',
-                ]);
-            }
+        return new CouponResource($coupon->refresh()->load('store'));
+    }
 
-            if ($unique) {
-                // Stock is the pool's unsold count, never typed in.
-                unset($data['stock']);
-                if (! $locked->unique_codes) {
-                    $data['stock'] = $pool->stockFor($locked);
-                }
-            }
+    /**
+     * A code list has no shared code, and its usage limit is its number of codes (kept in step by
+     * syncCodeCounts). Switching a list off makes the coupon unlimited again until a limit is typed.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function codeDelivery(array $data, ?Coupon $coupon): array
+    {
+        $list = (bool) ($data['unique_codes'] ?? $coupon?->unique_codes);
 
-            $locked->update($data);
-        });
-        $coupon->refresh();
+        if ($list) {
+            unset($data['usage_limit']);
+            $data['code'] = null;
+        } elseif ($coupon?->unique_codes && ! array_key_exists('usage_limit', $data)) {
+            $data['usage_limit'] = null;
+        }
 
-        return new CouponResource($this->withReserved($coupon->load('store')));
+        return $data;
     }
 
     public function destroy(Coupon $coupon): Response
@@ -141,7 +132,7 @@ class CouponController extends Controller
         $copy->status = CouponStatus::Draft;
         $copy->uses_count = 0;
         if ($copy->unique_codes) {
-            $copy->stock = 0; // codes belong to one coupon: the copy starts with an empty pool
+            $copy->usage_limit = 0; // codes belong to one coupon: the copy starts with an empty list
         }
         $copy->save();
 
@@ -152,20 +143,13 @@ class CouponController extends Controller
     /** Starts the usage count again (e.g. the brand topped the coupon up). Past clicks stay in Redemptions. */
     public function resetUses(Coupon $coupon): CouponResource
     {
+        // A handed-out code is gone for good: a code list is topped up by adding codes instead.
+        abort_if($coupon->unique_codes, 422, 'This coupon uses a code list. Add more codes instead of resetting uses.');
+
         $before = $coupon->uses_count;
         Coupon::whereKey($coupon->id)->toBase()->update(['uses_count' => 0]);
         Audit::log('uses_reset', $coupon, ['uses_count' => [$before, 0]]);
 
         return new CouponResource($coupon->refresh()->load('store'));
-    }
-
-    private function withReserved(Coupon $coupon): Coupon
-    {
-        $coupon->loadSum(['orderItems as reserved_stock' => fn ($q) => $q->whereHas('order', fn ($o) => $o->where('status', OrderStatus::Pending))], 'quantity');
-
-        return $coupon->loadCount([
-            'codes as codes_available' => fn ($q) => $q->whereNull('order_item_id'),
-            'codes as codes_sold' => fn ($q) => $q->whereNotNull('order_item_id'),
-        ]);
     }
 }

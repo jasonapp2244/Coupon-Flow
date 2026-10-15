@@ -1,8 +1,38 @@
 # Test Status
 
-_Last run: 2026-10-06_
+_Last run: 2026-10-15_
 
 ## Backend
+`php artisan test` (2026-10-15, code lists + profit) -> **120 passed (771 assertions)**; pint passed; new suite
+`CodeListAndProfitTest` (10). Admin + website tsc clean. Headless Chrome on the dev servers: visitor A code 1, refresh
+same code, Get another code -> code 2, third try -> limit message; visitor B (other browser) code 3; coupon then hidden;
+admin Codes card 0 of 3 left with the used list; Confirm sale $150 -> 8% -> $12.00, row Used, Profit Earned / Conversion /
+Dashboard Profit (30 days) updated; no console errors.
+
+`php artisan test` (2026-10-15, paid coupons removed) -> **110 passed (648 assertions)**; `pint --test` passed;
+`route:list --path=api` 86 routes, none for orders/checkout/stripe/register/verify/codes. 4 suites deleted with the
+feature (Checkout, StripeSetupCheck, UniqueCodes, ShopSwitch); new/rewritten: no public accounts, staff email change
+without link, reset links open the admin, Coupon Code needs a code, retired settings dropped, trash purge, dashboard
++ analytics + CSV shape. Admin + website: tsc clean, builds OK. Headless Chrome: admin dashboard, coupons, create/edit
+coupon, analytics, settings general/notifications, trash, redemptions load with no API errors and no console errors,
+no Orders link, /orders goes home; website pass unchanged (no shop wording, old paths redirect home).
+
+Website (2026-10-15, after deleting the shop files): `tsc` clean, build + SSR + sitemap (29 URLs) + pre-render OK; same
+headless Chrome pass (no shop wording/links, old paths redirect home, no console errors).
+
+`php artisan test` (2026-10-15, cart removed from the website; no backend code changes) → **153 passed (881 assertions)**.
+Admin `tsc --noEmit` clean. Website `tsc` + `vite build` + SSR build + sitemap (28 URLs) + pre-render (28 pages) OK.
+Headless Chrome on the dev servers: /, /coupons, /stores/nike, /promotions/at/sephora and the 5 info pages show no
+cart/sign-in/exclusive wording or links; /cart, /login, /account/orders, /checkout/success, /refund-policy redirect
+to /; Nike row has only SHOW COUPON CODE; no console errors.
+
+`php artisan test` (2026-10-14, health check, no code changes) → **153 passed (881 assertions)**; admin `tsc --noEmit` clean, admin `vite build` OK (needs `VITE_API_URL` + `VITE_SITE_URL`).
+
+`php artisan test` (2026-10-08, health check, no code changes) → **153 passed (881 assertions)**; admin `tsc --noEmit` clean.
+
+`php artisan test` (2026-10-07, demo paid coupons) → **153 passed (881 assertions)**. New in `AccountSecurityTest`:
+demo seeding adds the two paid pool coupons (10 codes, stock 10 each) and is safe to run twice.
+
 `php artisan test` (2026-10-06) → **152 passed (872 assertions)**. New suites: `StaffRolesTest` (7), `TwoFactorTest` (8:
 setup, challenge, clock drift, replay, 5 wrong codes, recovery once, disable needs password, admin reset, enforcement),
 `ActivityLogTest` (6), `DealWindowTest` (4: store-tz input, bare dates, hidden + /go blocked outside window, states +

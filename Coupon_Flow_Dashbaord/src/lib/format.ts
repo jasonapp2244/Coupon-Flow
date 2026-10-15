@@ -1,5 +1,6 @@
-export function money(cents: number, currency = 'usd'): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase() }).format(cents / 100);
+/** Affiliate-network amounts (redemption order value, commission), reported in US dollars. */
+export function money(cents: number): string {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 }
 
 export function number(n: number): string {
@@ -46,8 +47,7 @@ export function timeAgo(value: string): string {
   return `${days} day${days === 1 ? '' : 's'} ago`;
 }
 
-/** Chart tooltip formatters: Recharts passes loosely typed values (possibly undefined). */
-export const tooltipMoney = (dollars: unknown) => money(Math.round(Number(dollars ?? 0) * 100));
+/** Chart tooltip formatter: Recharts passes loosely typed values (possibly undefined). */
 export const tooltipNumber = (value: unknown) => number(Number(value ?? 0));
 
 export function slugify(text: string): string {
@@ -59,16 +59,6 @@ const SITE_URL = (import.meta.env.VITE_SITE_URL ?? 'http://127.0.0.1:5173').repl
 /** The store's share link on the public website (same page as /stores/{slug}, which search engines index). */
 export function storePublicUrl(slug: string): string {
   return `${SITE_URL}/promotions/at/${slug}`;
-}
-
-/** "2.99" (dollars as typed by an admin) -> 299 cents; empty -> 0. */
-export function toCents(value: string): number {
-  const n = Number.parseFloat(value);
-  return Number.isFinite(n) ? Math.round(n * 100) : 0;
-}
-
-export function fromCents(cents: number): string {
-  return cents ? (cents / 100).toFixed(2) : '';
 }
 
 /** "1 coupon", "8 coupons": count with the right word form. */

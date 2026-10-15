@@ -67,7 +67,7 @@ function LoginForm({ onLogin, onForgot }: { onLogin: (user: User) => void; onFor
   const finish = async (res: { token: string; user: User }) => {
     setToken(res.token, rememberMe);
     if (!isStaff(res.user)) {
-      // Valid customer credentials, but this panel is for staff only: drop the token again.
+      // Valid credentials, but not a staff role this panel knows: drop the token again.
       await api.post('/auth/logout').catch(() => undefined);
       clearToken();
       setChallenge(null);
@@ -500,7 +500,7 @@ function BrandPanel() {
           </div>
           <div className="flex-1 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 flex items-center gap-2.5">
             <div className="w-7 h-7 bg-violet-500/80 rounded-lg flex items-center justify-center"><ShoppingCart size={12} className="text-white" /></div>
-            <div><p className="text-white font-semibold text-sm">$128K</p><p className="text-white/50 text-[11px]">Revenue</p></div>
+            <div><p className="text-white font-semibold text-sm">52.4K</p><p className="text-white/50 text-[11px]">Coupons</p></div>
           </div>
           <div className="flex-1 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 flex items-center gap-2.5">
             <div className="w-7 h-7 bg-rose-500/80 rounded-lg flex items-center justify-center"><Zap size={12} className="text-white" /></div>

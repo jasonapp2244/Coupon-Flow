@@ -15,8 +15,7 @@ class SettingsController extends Controller
     {
         $data = collect(SiteSettings::DEFAULTS)->map(fn (array $defaults, string $group) => $settings->group($group));
 
-        // Checkout currency comes from STORE_CURRENCY (Stripe), so it is shown but not editable.
-        return response()->json(['data' => $data, 'meta' => ['currency' => strtoupper(config('services.stripe.currency'))]]);
+        return response()->json(['data' => $data]);
     }
 
     public function update(Request $request, string $group, SiteSettings $settings): JsonResponse
@@ -51,7 +50,6 @@ class SettingsController extends Controller
                 'site_name' => ['sometimes', 'string', 'max:120'],
                 'support_email' => ['sometimes', 'nullable', 'email', 'max:190'],
                 'timezone' => ['sometimes', 'timezone'],
-                'shop_enabled' => ['sometimes', 'boolean'],
             ],
             'seo' => [
                 'meta_title' => ['sometimes', 'nullable', 'string', 'max:190'],

@@ -20,9 +20,7 @@ function storeJsonLd(store: Store, coupons: Coupon[]) {
       '@type': 'Offer',
       name: c.title,
       ...(c.expires_at ? { validThrough: c.expires_at } : {}),
-      price: (c.price_cents / 100).toFixed(2),
-      priceCurrency: c.currency.toUpperCase(),
-      availability: c.in_stock ? 'https://schema.org/InStock' : 'https://schema.org/SoldOut',
+      availability: 'https://schema.org/InStock',
     })),
   };
 }

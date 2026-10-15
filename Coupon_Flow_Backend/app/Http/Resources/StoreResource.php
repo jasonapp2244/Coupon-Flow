@@ -25,6 +25,7 @@ class StoreResource extends JsonResource
             // Merchant links are admin-only; the public site links out through /api/go.
             'direct_url' => $this->when($this->forAdmin($request), $this->direct_url),
             'tracking_url' => $this->when($this->forAdmin($request), $this->tracking_url),
+            'commission_percent' => $this->when($this->forAdmin($request), $this->commission_percent),
             'logo_url' => $this->logo_path ? Storage::disk('public')->url($this->logo_path) : null,
             'meta_title' => $this->meta_title,
             'meta_description' => $this->meta_description,

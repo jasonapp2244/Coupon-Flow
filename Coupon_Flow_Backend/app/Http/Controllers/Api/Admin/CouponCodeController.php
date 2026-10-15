@@ -5,68 +5,108 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Coupon;
 use App\Models\CouponCode;
-use App\Services\CouponCodePool;
+use App\Services\Audit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
-/** The pool of unique codes behind a paid coupon sold with "Unique code per buyer". */
+/** A coupon's code list: each click on the website takes the next free code. */
 class CouponCodeController extends Controller
 {
+    private const MAX_PER_UPLOAD = 5000;
+
     public function index(Request $request, Coupon $coupon): JsonResponse
     {
-        $request->validate([
-            'status' => ['nullable', 'in:available,sold'],
-            'q' => ['nullable', 'string', 'max:100'],
-        ]);
+        $request->validate(['state' => ['nullable', Rule::in(['free', 'used'])]]);
 
         $codes = $coupon->codes()
-            ->with('orderItem:id,order_id')
-            ->when($request->query('status') === 'available', fn ($q) => $q->whereNull('order_item_id'))
-            ->when($request->query('status') === 'sold', fn ($q) => $q->whereNotNull('order_item_id'))
-            ->when($request->query('q'), fn ($q, $term) => $q->where('code', 'like', '%'.addcslashes($term, '%_\\').'%'))
-            ->orderByRaw('order_item_id is null desc')
-            ->orderBy('id')
-            ->paginate($this->perPage($request));
+            ->with('redemption:id,reference')
+            ->when($request->query('state') === 'free', fn ($q) => $q->whereNull('redemption_id'))
+            ->when($request->query('state') === 'used', fn ($q) => $q->whereNotNull('redemption_id'))
+            ->orderByRaw('redemption_id is null')->latest('assigned_at')->orderBy('id')
+            ->paginate($this->perPage($request, 50));
 
         return response()->json([
-            'data' => collect($codes->items())->map(fn (CouponCode $code) => [
-                'id' => $code->id,
-                'code' => $code->code,
-                'status' => $code->order_item_id ? 'sold' : 'available',
-                'order_id' => $code->orderItem?->order_id,
-                'assigned_at' => $code->assigned_at?->toIso8601String(),
+            'data' => $codes->getCollection()->map(fn (CouponCode $c) => [
+                'id' => $c->id,
+                'code' => $c->code,
+                'used' => $c->redemption_id !== null,
+                'assigned_at' => $c->assigned_at?->toIso8601String(),
+                'redemption_reference' => $c->redemption?->reference,
             ]),
             'meta' => [
                 'current_page' => $codes->currentPage(),
                 'last_page' => $codes->lastPage(),
                 'per_page' => $codes->perPage(),
                 'total' => $codes->total(),
-                'from' => $codes->firstItem(),
-                'to' => $codes->lastItem(),
             ],
+            'counts' => $this->counts($coupon),
         ]);
     }
 
-    public function store(Request $request, Coupon $coupon, CouponCodePool $pool): JsonResponse
+    /** Pasted codes (one per line or comma-separated) or a CSV/TXT file (first column). Duplicates are skipped. */
+    public function store(Request $request, Coupon $coupon): JsonResponse
     {
-        $data = $request->validate([
-            'codes' => ['required', 'array', 'min:1', 'max:5000'],
-            'codes.*' => ['nullable', 'string', 'max:100'], // blank lines arrive as null and are skipped
-        ], [
-            'codes.max' => 'Add at most 5,000 codes at a time.',
-            'codes.*.max' => 'Codes can be at most 100 characters.',
+        $request->validate([
+            'codes' => ['required_without:file', 'nullable', 'string', 'max:500000'],
+            'file' => ['required_without:codes', 'nullable', 'file', 'mimes:csv,txt', 'max:2048'],
         ]);
 
-        $result = $pool->add($coupon, $data['codes']);
+        $lines = $request->hasFile('file')
+            ? array_map(fn (string $line) => str_getcsv($line)[0] ?? '', file($request->file('file')->getRealPath(), FILE_IGNORE_NEW_LINES) ?: [])
+            : preg_split('/[\r\n,]+/', (string) $request->input('codes'));
 
-        return response()->json([...$result, 'stock' => $coupon->fresh()->stock], Response::HTTP_CREATED);
+        $codes = collect($lines)
+            ->map(fn ($code) => trim((string) $code, " \t\"'"))
+            ->filter(fn (string $code) => $code !== '' && mb_strlen($code) <= 100)
+            ->unique()->values();
+
+        if ($codes->isEmpty()) {
+            throw ValidationException::withMessages(['codes' => 'No codes found. Put one code per line.']);
+        }
+        if ($codes->count() > self::MAX_PER_UPLOAD) {
+            throw ValidationException::withMessages(['codes' => 'Add at most '.number_format(self::MAX_PER_UPLOAD).' codes at a time.']);
+        }
+
+        $known = $coupon->codes()->whereIn('code', $codes)->pluck('code');
+        $new = $codes->diff($known)->values();
+        $now = now();
+
+        foreach ($new->chunk(500) as $chunk) {
+            CouponCode::insert($chunk->map(fn (string $code) => [
+                'coupon_id' => $coupon->id, 'code' => $code, 'created_at' => $now, 'updated_at' => $now,
+            ])->all());
+        }
+
+        $coupon->syncCodeCounts();
+        if ($new->isNotEmpty()) {
+            Audit::log('codes_added', $coupon, ['codes' => $new->count()]);
+        }
+
+        return response()->json(['added' => $new->count(), 'skipped' => $codes->count() - $new->count(), ...$this->counts($coupon)], Response::HTTP_CREATED);
     }
 
-    public function destroy(Coupon $coupon, CouponCode $code, CouponCodePool $pool): JsonResponse
+    /** Only a free code can be removed: a handed-out one belongs to a visitor's click. */
+    public function destroy(Coupon $coupon, CouponCode $code): Response|JsonResponse
     {
-        $pool->remove($coupon, $code);
+        if ($code->redemption_id !== null) {
+            return response()->json(['message' => 'This code was already handed out to a visitor and cannot be removed.'], 422);
+        }
 
-        return response()->json(['stock' => $coupon->fresh()->stock]);
+        $code->delete();
+        $coupon->syncCodeCounts();
+        Audit::log('code_removed', $coupon, ['code' => $code->code]);
+
+        return response()->noContent();
+    }
+
+    /** @return array{total: int, left: int} */
+    private function counts(Coupon $coupon): array
+    {
+        $total = $coupon->codes()->count();
+
+        return ['total' => $total, 'left' => $total - $coupon->codes()->whereNotNull('redemption_id')->count()];
     }
 }

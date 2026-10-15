@@ -31,22 +31,17 @@ class SaveCouponRequest extends FormRequest
             'is_featured' => ['sometimes', 'boolean'],
             'is_verified' => ['sometimes', 'boolean'],
             'is_exclusive' => ['sometimes', 'boolean'],
-            // Stripe's minimum charge is 50 cents in USD; 0 means the coupon is free.
-            'price_cents' => ['sometimes', 'integer', 'min:0', 'max:99999999', function (string $attr, mixed $value, \Closure $fail) {
-                if ($value > 0 && $value < 50) {
-                    $fail('A paid coupon must cost at least 0.50.');
-                }
-            }],
-            // Ignored for unique-code coupons: their stock is the number of unsold codes.
-            'stock' => ['nullable', 'integer', 'min:0'],
+            // Code list: each click gets the next code; a visitor may take this many per day (0 = no limit).
             'unique_codes' => ['sometimes', 'boolean'],
+            'max_codes_per_visitor' => ['sometimes', 'integer', 'min:0', 'max:1000'],
+            // Overrides the store's rate for this coupon; empty = use the store's.
+            'commission_percent' => ['nullable', 'numeric', 'min:0', 'max:100', 'decimal:0,2'],
         ];
     }
 
     /**
-     * A code is required for "Coupon Code" coupons and for every paid coupon (the buyer pays for it),
-     * unless the paid coupon hands each buyer a code from its pool. Checked against the resulting
-     * coupon, so partial updates cannot leave a paid coupon without one.
+     * A "Coupon Code" coupon needs a code, unless it hands out codes from a list. Checked against
+     * the resulting coupon, so a partial update cannot leave one without it.
      *
      * @return list<\Closure>
      */
@@ -57,20 +52,11 @@ class SaveCouponRequest extends FormRequest
             $existing = $existing instanceof Coupon ? $existing : null;
 
             $type = $this->input('type', $existing?->type->value);
-            $price = (int) $this->input('price_cents', $existing?->price_cents ?? 0);
             $code = $this->exists('code') ? $this->input('code') : $existing?->code;
-            $unique = $this->has('unique_codes') ? $this->boolean('unique_codes') : (bool) $existing?->unique_codes;
+            $list = $this->has('unique_codes') ? $this->boolean('unique_codes') : (bool) $existing?->unique_codes;
 
-            if ($unique && $price === 0) {
-                $validator->errors()->add('unique_codes', 'Unique codes are for paid coupons only.');
-
-                return;
-            }
-
-            if (blank($code) && ! $unique && ($type === CouponType::Code->value || $price > 0)) {
-                $validator->errors()->add('code', $price > 0
-                    ? 'A paid coupon needs a code: it is what the buyer receives.'
-                    : 'Enter the coupon code.');
+            if (blank($code) && ! $list && $type === CouponType::Code->value) {
+                $validator->errors()->add('code', 'Enter the coupon code.');
             }
         }];
     }

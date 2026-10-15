@@ -16,16 +16,14 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
- * Local/demo data only: sample catalogue ported from the dashboard prototype (all coupons free;
- * make one paid in the admin to try checkout), demo redemptions, a CSV brand feed source and the test customer.
- * Never run in production (DatabaseSeeder skips it there).
+ * Local/demo data only: sample catalogue ported from the dashboard prototype, demo redemptions
+ * and a CSV brand feed source. Never run in production (DatabaseSeeder skips it there).
  */
 class DemoSeeder extends Seeder
 {
     public function run(): void
     {
         $admin = User::where('role', Role::Admin)->firstOrFail();
-        $this->seedTestCustomer();
         $storeCategories = $this->categories(CategoryType::Store, ['E-Commerce', 'Fashion', 'Retail', 'Marketplace', 'Electronics', 'Beauty', 'Travel', 'Food']);
         $blogCategories = $this->categories(CategoryType::Blog, ['Deals', 'Fashion', 'Tips', 'Electronics', 'Beauty']);
 
@@ -49,19 +47,19 @@ class DemoSeeder extends Seeder
             'status' => $s[5],
         ])]);
 
-        // [store, title, type, code, expiry, status, featured, verified, exclusive, price_cents, stock]
+        // [store, title, type, code, expiry, status, featured, verified, exclusive]
         $coupons = [
-            ['Amazon', 'Save 20% on All Orders', 'Coupon Code', 'SAVE20FALL', 'Oct 31, 2026', 'Active', true, true, false, 0, null],
-            ['Walmart', 'Free Shipping on $50+', 'No Code Required', null, 'Dec 31, 2026', 'Active', false, true, false, 0, null],
-            ['Nike', '15% Off Nike Running Shoes', 'Coupon Code', 'NIKE15RUN', 'Oct 15, 2026', 'Active', true, true, true, 0, null],
-            ['Target', '$25 Off $100 Target Order', 'Coupon Code', 'TARGET25', 'Sep 30, 2026', 'Expired', false, false, false, 0, null],
-            ['eBay', 'eBay Extra 10% Off Electronics', 'Deal', null, 'Nov 15, 2026', 'Active', true, true, false, 0, null],
-            ['Sephora', 'Sephora Beauty Sale — 30% Off', 'Coupon Code', 'BEAUTY30', 'Nov 5, 2026', 'Active', false, true, true, 0, null],
-            ['Best Buy', 'Best Buy: $50 Off $250+', 'Coupon Code', 'BBY50OFF', 'Nov 30, 2026', 'Active', true, true, true, 0, null],
-            ['Adidas', 'Adidas: Buy 2 Get 1 Free', 'Deal', null, 'Oct 20, 2026', 'Active', true, false, false, 0, null],
+            ['Amazon', 'Save 20% on All Orders', 'Coupon Code', 'SAVE20FALL', 'Oct 31, 2026', 'Active', true, true, false],
+            ['Walmart', 'Free Shipping on $50+', 'No Code Required', null, 'Dec 31, 2026', 'Active', false, true, false],
+            ['Nike', '15% Off Nike Running Shoes', 'Coupon Code', 'NIKE15RUN', 'Oct 15, 2026', 'Active', true, true, true],
+            ['Target', '$25 Off $100 Target Order', 'Coupon Code', 'TARGET25', 'Sep 30, 2026', 'Expired', false, false, false],
+            ['eBay', 'eBay Extra 10% Off Electronics', 'Deal', null, 'Nov 15, 2026', 'Active', true, true, false],
+            ['Sephora', 'Sephora Beauty Sale — 30% Off', 'Coupon Code', 'BEAUTY30', 'Nov 5, 2026', 'Active', false, true, true],
+            ['Best Buy', 'Best Buy: $50 Off $250+', 'Coupon Code', 'BBY50OFF', 'Nov 30, 2026', 'Active', true, true, true],
+            ['Adidas', 'Adidas: Buy 2 Get 1 Free', 'Deal', null, 'Oct 20, 2026', 'Active', true, false, false],
         ];
 
-        foreach ($coupons as [$store, $title, $type, $code, $expiry, $status, $featured, $verified, $exclusive, $price, $stock]) {
+        foreach ($coupons as [$store, $title, $type, $code, $expiry, $status, $featured, $verified, $exclusive]) {
             Coupon::updateOrCreate(['store_id' => $stores[$store]->id, 'title' => $title], [
                 'type' => $type,
                 'code' => $code,
@@ -70,9 +68,6 @@ class DemoSeeder extends Seeder
                 'is_featured' => $featured,
                 'is_verified' => $verified,
                 'is_exclusive' => $exclusive,
-                'price_cents' => $price,
-                'stock' => $stock,
-                'unique_codes' => false,
                 'description' => "{$title} at {$store}. Terms apply.",
             ]);
         }
@@ -126,12 +121,6 @@ class DemoSeeder extends Seeder
 
         // A usage limit to show "Used N times · X left" and the % bar.
         Coupon::where('title', 'Save 20% on All Orders')->update(['usage_limit' => 500]);
-    }
-
-    private function seedTestCustomer(): void
-    {
-        $customer = User::firstOrNew(['email' => 'tauseefchoohan0401@gmail.com']);
-        $customer->forceFill(['name' => 'Test Customer', 'password' => 'Customer1234', 'role' => Role::Customer, 'email_verified_at' => now()])->save();
     }
 
     /**

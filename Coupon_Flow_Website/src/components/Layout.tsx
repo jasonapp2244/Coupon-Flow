@@ -1,10 +1,8 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router';
-import { ChevronDown, LogOut, Menu, Receipt, Search, ShoppingBag, User, UserRound, X } from 'lucide-react';
+import { ChevronDown, Menu, Search, X } from 'lucide-react';
 import { api, withQuery } from '../lib/api';
 import { useApi, useDebounced } from '../lib/hooks';
-import { useAuth } from '../store/auth';
-import { useCart } from '../store/cart';
 import { useSite } from '../store/site';
 import CouponRevealModal from './CouponRevealModal';
 import { StoreLogo } from './States';
@@ -153,56 +151,7 @@ function CategoriesMenu() {
   );
 }
 
-function AccountMenu() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
-  const box = useRef<HTMLDivElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
-
-  useDismiss(open, () => setOpen(false), box, trigger);
-
-  if (!user) {
-    return <Link to="/login" className="rounded-md px-3 py-2 text-sm font-semibold text-ink-soft hover:text-ink">Sign in</Link>;
-  }
-
-  const item = 'flex items-center gap-2 px-4 py-2 text-sm hover:bg-paper';
-  return (
-    <div ref={box} className="relative">
-      <button ref={trigger} onClick={() => setOpen(o => !o)} aria-expanded={open} aria-label={`Account menu for ${user.name}`}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-ink font-semibold text-white">
-        {user.name.charAt(0).toUpperCase()}
-      </button>
-      {open && (
-        <div className="absolute right-0 top-11 z-40 w-60 rounded-xl bg-card py-2 shadow-xl ring-1 ring-line">
-          <p className="px-4 pb-2 text-sm font-semibold">{user.name}<span className="block truncate text-xs font-normal text-muted">{user.email}</span></p>
-          <Link to="/account" onClick={() => setOpen(false)} className={item}><UserRound size={15} aria-hidden="true" /> My account</Link>
-          <Link to="/account/orders" onClick={() => setOpen(false)} className={item}><Receipt size={15} aria-hidden="true" /> My orders</Link>
-          <button onClick={async () => { setOpen(false); await logout(); navigate('/'); }} className={`${item} w-full text-left`}>
-            <LogOut size={15} aria-hidden="true" /> Sign out
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** Cart icon and account menu: only while the shop sells exclusive codes. */
-function ShopControls() {
-  const { count } = useCart();
-  return (
-    <>
-      <Link to="/cart" className="relative flex h-10 w-10 items-center justify-center rounded-lg hover:bg-paper" aria-label={`Cart, ${count} item${count === 1 ? '' : 's'}`}>
-        <ShoppingBag size={20} />
-        {count > 0 && <span className="absolute right-0.5 top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-deal px-1 text-xs font-bold text-white">{count}</span>}
-      </Link>
-      <div className="hidden lg:block"><AccountMenu /></div>
-    </>
-  );
-}
-
 function Header() {
-  const { shop_enabled } = useSite();
   const { pathname } = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -220,7 +169,6 @@ function Header() {
         </nav>
         {pathname !== '/' && <div className="hidden flex-1 md:block md:max-w-sm md:ml-auto"><SearchBox /></div>}
         <div className={`ml-auto flex items-center gap-1 ${pathname !== '/' ? 'md:ml-0' : ''}`}>
-          {shop_enabled && <ShopControls />}
           <button className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-paper lg:hidden" onClick={() => setMobileOpen(o => !o)}
             aria-label={mobileOpen ? 'Close menu' : 'Open menu'} aria-expanded={mobileOpen}>
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
@@ -233,9 +181,6 @@ function Header() {
 }
 
 function MobileMenu() {
-  const { user, logout } = useAuth();
-  const { shop_enabled } = useSite();
-  const navigate = useNavigate();
   const item = 'block rounded-md px-3 py-2.5 text-base font-semibold hover:bg-paper';
   return (
     <div className="border-t border-line px-4 pb-4 pt-3 lg:hidden">
@@ -245,22 +190,13 @@ function MobileMenu() {
         <Link to="/stores" className={item}>Stores</Link>
         <Link to="/categories" className={item}>Categories</Link>
         <Link to="/blog" className={item}>Blog</Link>
-        {shop_enabled && (user ? (
-          <>
-            <Link to="/account" className={item}>My account</Link>
-            <Link to="/account/orders" className={item}>My orders</Link>
-            <button onClick={async () => { await logout(); navigate('/'); }} className={`${item} text-left`}>Sign out</button>
-          </>
-        ) : (
-          <Link to="/login" className={item}><User size={16} className="mr-2 inline" aria-hidden="true" />Sign in</Link>
-        ))}
       </nav>
     </div>
   );
 }
 
 function Footer() {
-  const { site_name, support_email, shop_enabled } = useSite();
+  const { site_name, support_email } = useSite();
   const col = 'flex flex-col gap-2 text-sm';
   const link = 'text-ink-soft hover:text-ink';
   const heading = 'mb-1 text-sm font-semibold text-ink';
@@ -271,33 +207,24 @@ function Footer() {
         <div className="col-span-2 lg:col-span-1">
           <Logo />
           <p className="mt-3 max-w-xs text-sm text-ink-soft">
-            Working coupon codes and deals for the stores you already shop.{shop_enabled && ' Exclusive codes are sold once and paid for securely by card.'}
+            Working coupon codes and deals for the stores you already shop.
           </p>
-          {support_email && <p className="mt-4 text-sm text-ink-soft">{shop_enabled ? 'Help with an order' : 'Questions'}: <a href={`mailto:${support_email}`} className="font-semibold text-ink underline underline-offset-2">{support_email}</a></p>}
+          {support_email && <p className="mt-4 text-sm text-ink-soft">Questions: <a href={`mailto:${support_email}`} className="font-semibold text-ink underline underline-offset-2">{support_email}</a></p>}
         </div>
         <nav className={col} aria-label="Browse">
           <p className={heading}>Browse</p>
           <Link to="/coupons" className={link}>All coupons</Link>
-          {shop_enabled && <Link to="/coupons?kind=paid" className={link}>Exclusive codes</Link>}
           <Link to="/stores" className={link}>Stores A to Z</Link>
           <Link to="/categories" className={link}>Categories</Link>
           <Link to="/blog" className={link}>Blog</Link>
         </nav>
-        <nav className={col} aria-label={shop_enabled ? 'Your account' : 'Help'}>
-          <p className={heading}>{shop_enabled ? 'Your account' : 'Help'}</p>
-          {shop_enabled && (
-            <>
-              <Link to="/account" className={link}>My account</Link>
-              <Link to="/account/orders" className={link}>My orders</Link>
-              <Link to="/cart" className={link}>Cart</Link>
-            </>
-          )}
+        <nav className={col} aria-label="Help">
+          <p className={heading}>Help</p>
           <Link to="/contact" className={link}>Contact us</Link>
         </nav>
         <nav className={col} aria-label="Legal">
           <p className={heading}>About</p>
           <Link to="/about" className={link}>About {site_name}</Link>
-          {shop_enabled && <Link to="/refund-policy" className={link}>Refund policy</Link>}
           <Link to="/terms" className={link}>Terms of use</Link>
           <Link to="/privacy" className={link}>Privacy policy</Link>
           <Link to="/affiliate-disclosure" className={link}>Affiliate disclosure</Link>
@@ -305,7 +232,7 @@ function Footer() {
       </div>
       <div className="border-t border-line">
         <p className="page py-5 text-xs text-muted">
-          © {new Date().getFullYear()} {site_name}.{shop_enabled && ' Card payments are processed by Stripe; we never see or store your card number.'}
+          © {new Date().getFullYear()} {site_name}.
           {' '}Some links earn us a commission at no cost to you.
         </p>
       </div>

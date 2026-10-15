@@ -30,6 +30,7 @@ class SaveStoreRequest extends FormRequest
             'is_top' => ['sometimes', 'boolean'],
             'is_editor_choice' => ['sometimes', 'boolean'],
             'status' => ['sometimes', Rule::enum(StoreStatus::class)],
+            'commission_percent' => ['nullable', 'numeric', 'min:0', 'max:100', 'decimal:0,2'],
         ];
     }
 }

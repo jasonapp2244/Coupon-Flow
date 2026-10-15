@@ -1,9 +1,7 @@
-import { Link, useLocation, useNavigate } from 'react-router';
-import { BadgeCheck, CheckCircle2, Clock, Copy, ShoppingBag } from 'lucide-react';
-import { expiryLabel, money, msLeft } from '../lib/format';
-import { goUrl, openOut, revealHash, REVEAL_HASH_PREFIX } from '../lib/out';
-import { useCart } from '../store/cart';
-import { usePurchases } from '../store/purchases';
+import { useLocation, useNavigate } from 'react-router';
+import { BadgeCheck, Clock, Copy } from 'lucide-react';
+import { expiryLabel, msLeft } from '../lib/format';
+import { goUrl, newClaimToken, openOut, rememberToken, revealHash, REVEAL_HASH_PREFIX } from '../lib/out';
 import { useSite } from '../store/site';
 import { useToast } from '../store/toast';
 import { StoreLogo } from './States';
@@ -39,42 +37,18 @@ export function useClickOut() {
   const navigate = useNavigate();
   const { pathname, search } = useLocation();
   return (couponId: number) => {
-    openOut(goUrl(couponId));
+    // Every click is a new claim: for a code-list coupon it gets the next code, and the pop-up
+    // reads the same token back so a refresh keeps showing that code.
+    const token = newClaimToken();
+    rememberToken(couponId, token);
+    openOut(goUrl(couponId, token));
     navigate({ pathname, search, hash: revealHash(couponId) }, { preventScrollReset: true });
   };
 }
 
-/** Exclusive code (only while the shop is switched on): price, then cart / bought / sold out. */
-function PaidCodeAction({ coupon }: { coupon: Coupon }) {
-  const cart = useCart();
-  const toast = useToast();
-  const orderId = usePurchases().orderFor(coupon.id);
-
-  // Checked before stock: a code the shopper owns stays theirs even once it sells out.
-  if (orderId !== undefined) {
-    return (
-      <Link to={`/account/orders/${orderId}`} className="btn-secondary">
-        <CheckCircle2 size={14} aria-hidden="true" /> Bought · view code
-      </Link>
-    );
-  }
-  if (!coupon.in_stock) {
-    return <span className="rounded-lg bg-line px-4 py-2 text-sm font-semibold text-ink-soft">Sold out</span>;
-  }
-  if (cart.has(coupon.id)) {
-    return <Link to="/cart" className="btn-secondary"><ShoppingBag size={14} aria-hidden="true" /> In your cart</Link>;
-  }
-  return (
-    <button onClick={() => { cart.add(coupon); toast('Added to cart'); }} className="btn-primary">
-      <ShoppingBag size={14} aria-hidden="true" /> Add to cart · {money(coupon.price_cents, coupon.currency)}
-    </button>
-  );
-}
-
 /**
  * One coupon, laid out like the reference coupon sites: store logo, title, description, expiry,
- * use count, and one action. For a free code or deal the logo, title and button all do the same
- * thing: open the store in a new tab and show the code ("No Code Required" for a deal) here.
+ * use count, and one action. The logo, title and button all do the same thing: open the store in a new tab and show the code ("No Code Required" for a deal) here.
  * The store name is plain text, never a link: every click on a coupon goes to the store.
  */
 export default function CouponTicket({ coupon, showStore = true }: { coupon: Coupon; showStore?: boolean }) {
@@ -88,18 +62,16 @@ export default function CouponTicket({ coupon, showStore = true }: { coupon: Cou
 
   return (
     <article id={`${REVEAL_HASH_PREFIX}${coupon.id}`} className="flex scroll-mt-24 flex-col gap-4 rounded-xl bg-card p-5 ring-1 ring-line sm:flex-row sm:items-center">
-      {store && (coupon.is_paid
-        ? <span className="hidden shrink-0 sm:block"><StoreLogo name={store.name} url={store.logo_url} /></span>
-        : (
-          <button onClick={open} tabIndex={-1} aria-hidden="true" className="hidden shrink-0 sm:block">
-            <StoreLogo name={store.name} url={store.logo_url} />
-          </button>
-        ))}
+      {store && (
+        <button onClick={open} tabIndex={-1} aria-hidden="true" className="hidden shrink-0 sm:block">
+          <StoreLogo name={store.name} url={store.logo_url} />
+        </button>
+      )}
 
       <div className="min-w-0 flex-1">
         {showStore && store && <p className="text-sm font-semibold text-ink-soft">{store.name}</p>}
         <h3 className="font-display text-xl font-semibold leading-snug">
-          {coupon.is_paid ? coupon.title : <button onClick={open} className="text-left hover:text-deal">{coupon.title}</button>}
+          <button onClick={open} className="text-left hover:text-deal">{coupon.title}</button>
         </h3>
         {coupon.description && <p className="mt-1 font-medium text-ink-soft line-clamp-2">{coupon.description}</p>}
         <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
@@ -111,7 +83,11 @@ export default function CouponTicket({ coupon, showStore = true }: { coupon: Cou
         {coupon.usage_limit !== null && coupon.uses_left !== null ? (
           <div className="mt-1 max-w-64">
             <p className="text-sm text-muted">
-              Used {used} {used === 1 ? 'time' : 'times'} · <span className={(coupon.used_percent ?? 0) >= 80 ? 'font-semibold text-raspberry' : ''}>{coupon.uses_left} left</span>
+              {coupon.code_list ? (
+                <span className={(coupon.used_percent ?? 0) >= 80 ? 'font-semibold text-raspberry' : ''}>{coupon.uses_left} {coupon.uses_left === 1 ? 'code' : 'codes'} left</span>
+              ) : (
+                <>Used {used} {used === 1 ? 'time' : 'times'} · <span className={(coupon.used_percent ?? 0) >= 80 ? 'font-semibold text-raspberry' : ''}>{coupon.uses_left} left</span></>
+              )}
             </p>
             <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuemin={0} aria-valuemax={100}
               aria-valuenow={coupon.used_percent ?? 0} aria-label={`${coupon.used_percent ?? 0}% of uses taken`}>
@@ -122,12 +98,10 @@ export default function CouponTicket({ coupon, showStore = true }: { coupon: Cou
       </div>
 
       <div className="shrink-0">
-        {coupon.is_paid ? <PaidCodeAction coupon={coupon} /> : (
-          <button onClick={open} className="btn-primary w-full uppercase sm:w-auto sm:min-w-44">
-            {coupon.has_code ? 'Show coupon code' : 'Get deal'}
-            <span className="sr-only"> (opens {store?.name ?? 'the store'} in a new tab)</span>
-          </button>
-        )}
+        <button onClick={open} className="btn-primary w-full uppercase sm:w-auto sm:min-w-44">
+          {coupon.has_code ? 'Show coupon code' : 'Get deal'}
+          <span className="sr-only"> (opens {store?.name ?? 'the store'} in a new tab)</span>
+        </button>
       </div>
     </article>
   );

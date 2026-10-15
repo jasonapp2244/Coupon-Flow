@@ -5,11 +5,11 @@ Read `progress/PROJECT_STATE.md` first; update the `progress/` files at the end 
 
 ## Facts
 - DB: MariaDB via XAMPP, database `coupon_follow`. Start MySQL: `F:\xampp\mysql\bin\mysqld.exe --defaults-file=F:\xampp\mysql\bin\my.ini --standalone`
-- Tests use in-memory SQLite (`phpunit.xml`); Stripe is faked with `tests/Support/FakeStripeHttpClient.php` — never hit real Stripe in tests.
+- Tests use in-memory SQLite (`phpunit.xml`).
 - Enum string values (`Active`, `Coupon Code`, …) intentionally match the React dashboard's labels.
-- Money = integer cents. `price_cents = 0` → free coupon (code public); `> 0` → paid (code only on paid orders).
-- Fulfilment happens **only** in the webhook (`StripeWebhookHandler`/`OrderFulfillment`), never on the success page.
-- Stripe: `StripeClient` singleton from `AppServiceProvider`; no `payment_method_types`; API version pinned in config.
+- Free coupons and deals only: selling exclusive codes (Stripe, orders, code pools, shopper accounts) was removed
+  on 2026-10-15 (migration `2026_10_15_100000_drop_paid_coupons`). Only staff sign in.
+- Public JSON never carries a code or merchant link: codes come from `reveal` after the click-out through `/api/go`.
 - Test account for any browser/manual testing: `tauseefchoohan0401@gmail.com` only.
 
 ## Verify before reporting done
@@ -17,4 +17,4 @@ Read `progress/PROJECT_STATE.md` first; update the `progress/` files at the end 
 
 ## Rules
 - No commits/pushes unless the user asks in that message. No live deploys.
-- Never weaken: code hiding for paid coupons, webhook signature check, stock reservation, idempotency.
+- Never weaken: code and merchant-link hiding in public JSON, atomic usage-limit counting in `ClickOut::record`.

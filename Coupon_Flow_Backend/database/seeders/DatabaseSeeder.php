@@ -10,7 +10,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(AdminSeeder::class);
 
-        // Demo catalogue, demo activity and the test customer never reach production.
+        // Demo catalogue and demo activity never reach production.
         if (! app()->isProduction()) {
             $this->call(DemoSeeder::class);
         }

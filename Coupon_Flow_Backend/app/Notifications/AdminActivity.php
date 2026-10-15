@@ -16,9 +16,9 @@ class AdminActivity extends Notification
     public function __construct(public readonly string $text) {}
 
     /**
-     * Always adds a bell entry. When $emailSwitch names a notification setting ("email" for sales
-     * activity, "error_alerts" for problems) and both it and the master "email" switch are on,
-     * admins also get an email.
+     * Always adds a bell entry. When $emailSwitch names a notification setting ("sync_alerts" for
+     * brand feeds, "redemption_alerts" for usage limits) and both it and the master "email" switch
+     * are on, admins and editors also get an email.
      */
     public static function broadcast(string $text, ?string $emailSwitch = null): void
     {

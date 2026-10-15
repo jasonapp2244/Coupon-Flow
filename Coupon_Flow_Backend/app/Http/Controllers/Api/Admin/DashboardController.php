@@ -3,13 +3,10 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\OrderResource;
 use App\Http\Resources\RedemptionResource;
 use App\Models\ActivityLog;
-use App\Models\Order;
 use App\Models\Redemption;
 use App\Services\DashboardStats;
-use App\Services\SiteSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -19,21 +16,17 @@ class DashboardController extends Controller
 {
     public function __construct(private readonly DashboardStats $stats) {}
 
-    public function index(Request $request, SiteSettings $settings): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $user = $request->user();
 
         return response()->json([
-            'shop_enabled' => $settings->shopEnabled(),
             'kpis' => $this->stats->kpis(),
             'usage' => $this->stats->usageKpis(),
             'uses' => $this->stats->usesSeries(30),
             'top_coupons' => $this->stats->topCoupons(30),
             'watch' => $this->stats->watchLists(),
             'feeds' => $this->stats->feedHealth(),
-            'sales' => $this->stats->salesSeries(30),
-            'top_stores' => $this->stats->topStores(30),
-            'recent_orders' => OrderResource::collection(Order::with(['user', 'items'])->latest()->limit(5)->get()),
             'recent_redemptions' => RedemptionResource::collection(Redemption::with('store')->latest('clicked_at')->limit(5)->get()),
             // The audit trail is admin-only; others get the notification bell instead.
             'recent_activity' => $user->isAdmin()
@@ -52,23 +45,22 @@ class DashboardController extends Controller
             'store_id' => $storeId,
             'uses' => $this->stats->usesSeries($days, $storeId),
             'top_coupons' => $this->stats->topCoupons($days, 10, $storeId),
-            'sales' => $this->stats->salesSeries($days, $storeId),
-            'top_stores' => $this->stats->topStores($days, 10, $storeId),
+            'profit_by_store' => $this->stats->profitByStore($days, $storeId),
         ]);
     }
 
     public function export(Request $request): StreamedResponse
     {
         [$days, $storeId] = $this->filters($request);
-        $sales = collect($this->stats->salesSeries($days, $storeId))->keyBy('date');
         $uses = $this->stats->usesSeries($days, $storeId);
+        $sales = $this->stats->salesByDay($days, $storeId);
 
-        return response()->streamDownload(function () use ($sales, $uses): void {
+        return response()->streamDownload(function () use ($uses, $sales): void {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['Date', 'Coupon uses', 'Paid orders', 'Revenue']);
+            fputcsv($out, ['Date', 'Coupon uses', 'Sales', 'Profit']);
             foreach ($uses as $row) {
-                $day = $sales[$row['date']] ?? ['orders' => 0, 'revenue_cents' => 0];
-                fputcsv($out, [$row['date'], $row['uses'], $day['orders'], number_format($day['revenue_cents'] / 100, 2, '.', '')]);
+                $day = $sales[$row['date']] ?? ['sales' => 0, 'profit_cents' => 0];
+                fputcsv($out, [$row['date'], $row['uses'], $day['sales'], number_format($day['profit_cents'] / 100, 2, '.', '')]);
             }
             fclose($out);
         }, "analytics-{$days}d".($storeId ? "-store-{$storeId}" : '').'.csv', ['Content-Type' => 'text/csv']);

@@ -1,7 +1,3 @@
-export function money(cents: number, currency = 'usd'): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase() }).format(cents / 100);
-}
-
 /** "Oct 31, 2026" — plain YYYY-MM-DD dates are parsed as local days so they never shift. */
 export function date(value: string | null | undefined): string {
   if (!value) return '';

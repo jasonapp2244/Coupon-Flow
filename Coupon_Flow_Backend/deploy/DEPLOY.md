@@ -12,8 +12,8 @@ The website must be at a domain root (it uses real paths like `/stores/nike`). T
 any folder or subdomain.
 
 ## 0. Before you start
-- Stripe account activated for live payments (business details, bank account, identity check).
-- A mailbox for order emails, e.g. `orders@example.com` (Site Tools > Email > Accounts).
+- A mailbox the API sends from, e.g. `noreply@example.com` (Site Tools > Email > Accounts). It sends
+  staff invitations, password-reset links and admin alerts.
 - PHP 8.2 or newer for the API site (Site Tools > Devs > PHP Manager).
 
 ## 1. Build the uploads (on your computer)
@@ -46,13 +46,13 @@ and redirects to the merchant, so merchant links never appear on the site.
    php artisan config:cache && php artisan route:cache
    ```
    This only creates the admin account. (A plain `db:seed` does the same in production: the demo
-   catalogue and test customer are skipped when `APP_ENV=production`.)
+   catalogue is skipped when `APP_ENV=production`.)
 5. Cron (Site Tools > Devs > Cron Jobs), every minute:
    ```
    /usr/local/bin/php /home/<user>/www/api.example.com/app/artisan schedule:run >> /dev/null 2>&1
    ```
    Use the PHP path SiteGround shows in the Cron Jobs page. This sends queued emails every minute,
-   checks for missed Stripe payments every 15 minutes, runs brand feeds that are due (each feed has
+   runs brand feeds that are due (each feed has
    its own hourly / 6-hourly / daily schedule), and prunes activity-log entries older than a year.
    Coupon deal windows and usage limits need no cron: they are checked on every request.
    Optional but recommended: rebuild and re-upload the website nightly (or after big imports) so the
@@ -60,24 +60,14 @@ and redirects to the merchant, so merchant links never appear on the site.
    see the live list: the page refreshes it on load, and expired or used-up links are refused.
 6. Open `https://api.example.com`: it should answer `{"status":"ok",…}`.
 
-## 4. Stripe (live)
-1. Dashboard > Developers > API keys > **Create restricted key**: write access to Checkout Sessions
-   and Refunds, read access to Webhook Endpoints. Put it in `STRIPE_SECRET`.
-2. Dashboard > Developers > Webhooks > **Add endpoint** `https://api.example.com/api/stripe/webhook`
-   with these events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
-   `checkout.session.async_payment_failed`, `checkout.session.expired`, `charge.refunded`,
-   `charge.dispute.created`. Put its signing secret in `STRIPE_WEBHOOK_SECRET`.
-3. `php artisan config:cache && php artisan stripe:check`: it must end with "Payments are ready."
-   In production it also refuses test keys, `http://` addresses, the log mailer and debug mode.
-
-## 5. Admin dashboard and website
+## 4. Admin dashboard and website
 1. Upload `admin.zip` into the admin site's `public_html` and extract (it includes `.htaccess`).
 2. Upload `website.zip` into the main site's `public_html` and extract (includes `.htaccess`,
    `sitemap.xml`, `robots.txt`).
 3. Site Tools > Speed > Caching: purge the cache after every upload so the new `index.html` is served.
 4. Every page in the sitemap (home, the list pages, the static pages and every store, category and article) is pre-rendered at build
    time from the live API (full HTML and meta tags for search engines and link previews, in
-   `_prerender/`). The build prints `prerender: 1 home, 1 stores list, 1 coupons list, 1 blog list, 1 categories list, 6 static, N store, N category, N article
+   `_prerender/`). The build prints `prerender: 1 home, 1 stores list, 1 coupons list, 1 blog list, 1 categories list, 5 static, N store, N category, N article
    pages written`; if it says the API wasn't
    reachable (normal on the very first release, before the API is live), rebuild and re-upload
    `website.zip` once the API answers at `API_URL`. The pages are a snapshot: visitors always see live
@@ -85,25 +75,25 @@ and redirects to the merchant, so merchant links never appear on the site.
    stores or categories, publishing articles, or changing the site name or support email in Settings,
    so search engines see them too.
 
-## 6. First login and settings
+## 5. First login and settings
 1. Sign in at `https://admin.example.com` with `ADMIN_EMAIL` / `ADMIN_PASSWORD`, then under
    Settings > My Account change the password and **turn on two-step login** (authenticator app;
    save the recovery codes somewhere safe).
-2. Settings > General: site name, **support email** (shown on the Contact page and after checkout)
+2. Settings > General: site name, **support email** (shown on the Contact page)
    and timezone (coupon start and end times are entered and shown in this timezone).
 3. Settings > SEO: default title and description.
 4. Settings > Staff: add editors (catalogue only) and viewers (read-only). Each gets an email to set
    their own password. Then Settings > Security > **Require two-step login** for everyone.
 5. Brand Feeds: add each brand that sends coupons (feed URL or CSV uploads; download the CSV
    template there to send them). Imported coupons arrive as Draft unless the feed auto-publishes.
-6. Add stores, categories and coupons. Paid coupons need a code and a price of at least 0.50.
+6. Add stores, categories and coupons. A "Coupon Code" coupon needs its code; deals don't.
 
-## 7. Go-live check
-- [ ] `php artisan stripe:check` says "Payments are ready."
-- [ ] Register on the website, confirm the email (the link must arrive in a real inbox).
-- [ ] Buy the cheapest paid coupon with a real card; the code shows on screen and by email.
-- [ ] Refund it from Admin > Orders; the order turns "Refunded".
-- [ ] Reveal a free code; it appears in Admin > Redemptions.
+## 6. Go-live check
+- [ ] `.env` has `APP_ENV=production`, `APP_DEBUG=false`, `https://` addresses and a real mailer (not `log`).
+- [ ] Add a staff member in Settings > Staff; the set-password email arrives in a real inbox.
+- [ ] Reveal a code on the website: the store opens in a new tab, the code pop-up shows here, and
+      the click appears in Admin > Redemptions.
+- [ ] Old links such as `https://example.com/cart` land on the home page.
 - [ ] Submit `https://example.com/sitemap.xml` in Google Search Console.
 
 ## Updating later

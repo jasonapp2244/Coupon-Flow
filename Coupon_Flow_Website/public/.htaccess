@@ -29,7 +29,7 @@ Options -Indexes
   RewriteRule ^promotions/at/([^/]+)/?$ _prerender/stores/$1.html [L]
 
   # ... and every other page is _prerender{path}.html: /stores/nike -> _prerender/stores/nike.html.
-  # The list pages are built without filters, so /stores?letter=B, /coupons?kind=paid, /blog?page=2
+  # The list pages are built without filters, so /stores?letter=B, /coupons?verified=1, /blog?page=2
   # etc. go to the app instead.
   RewriteCond %{QUERY_STRING} ^$ [OR]
   RewriteCond %{REQUEST_URI} !^/(stores|coupons|blog)$

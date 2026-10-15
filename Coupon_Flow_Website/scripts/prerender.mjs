@@ -30,7 +30,7 @@ const FIXED = [
   { url: '/coupons', label: 'coupons list' },
   { url: '/blog', label: 'blog list' },
   { url: '/categories', label: 'categories list' },
-  ...['/about', '/contact', '/refund-policy', '/terms', '/privacy', '/affiliate-disclosure'].map(url => ({ url, label: 'static' })),
+  ...['/about', '/contact', '/terms', '/privacy', '/affiliate-disclosure'].map(url => ({ url, label: 'static' })),
 ]
 const BY_SLUG = [
   { prefix: '/stores/', list: 'stores', label: 'store' },

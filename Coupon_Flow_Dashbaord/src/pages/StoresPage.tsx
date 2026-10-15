@@ -26,6 +26,7 @@ function StoreDrawer({ store, onClose, onEdit }: { store: Store; onClose: () => 
           ['Visitor Rating', <RatingCell rating={store.rating} />],
           ['Direct URL', <a href={store.direct_url} target="_blank" rel="noreferrer" className="text-blue-600 break-all">{store.direct_url}</a>],
           ['Tracking URL', <span className="font-mono text-slate-600 break-all">{store.tracking_url ?? '—'}</span>],
+          ['Commission', store.commission_percent != null ? `${store.commission_percent}%` : 'Not set'],
           ['Top Store', store.is_top ? <Check size={13} className="text-emerald-500" /> : '—'],
           ['Editor Choice', store.is_editor_choice ? <Check size={13} className="text-emerald-500" /> : '—'],
           ['Last Updated', date(store.updated_at)],

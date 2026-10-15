@@ -43,15 +43,12 @@ class CouponResource extends JsonResource
             'is_featured' => $this->is_featured,
             'is_verified' => $this->is_verified,
             'is_exclusive' => $this->is_exclusive,
-            'price_cents' => $this->price_cents,
-            'currency' => config('services.stripe.currency'),
-            'stock' => $this->stock,
+            // Code list: usage_limit is the number of codes and uses_count the codes handed out.
             'unique_codes' => $this->unique_codes,
-            // Pool counts (edit view). Unsold includes codes held by open checkouts.
-            'codes_available' => $this->when(isset($this->codes_available), fn () => (int) $this->codes_available),
-            'codes_sold' => $this->when(isset($this->codes_sold), fn () => (int) $this->codes_sold),
-            // Units held by unpaid checkouts; they return to stock if those checkouts expire.
-            'reserved_stock' => $this->when(isset($this->reserved_stock), fn () => (int) $this->reserved_stock),
+            'codes_total' => $this->unique_codes ? (int) $this->usage_limit : 0,
+            'codes_left' => $this->unique_codes ? (int) $this->usesLeft() : 0,
+            'max_codes_per_visitor' => $this->max_codes_per_visitor,
+            'commission_percent' => $this->commission_percent,
             'updated_at' => $this->updated_at?->toIso8601String(),
             'deleted_at' => $this->deleted_at?->toIso8601String(),
         ];

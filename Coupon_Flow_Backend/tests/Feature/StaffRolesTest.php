@@ -25,7 +25,7 @@ class StaffRolesTest extends TestCase
         $coupon = Coupon::factory()->for($store)->create();
         Sanctum::actingAs(User::factory()->viewer()->create());
 
-        foreach (['dashboard', 'stores', "stores/{$store->id}", 'coupons', "coupons/{$coupon->id}", 'categories?type=store', 'trash', 'orders', 'redemptions', 'settings'] as $path) {
+        foreach (['dashboard', 'stores', "stores/{$store->id}", 'coupons', "coupons/{$coupon->id}", 'categories?type=store', 'trash', 'redemptions', 'settings'] as $path) {
             $this->getJson("/api/v1/admin/{$path}")->assertOk();
         }
 
@@ -40,7 +40,7 @@ class StaffRolesTest extends TestCase
         $this->assertNull($coupon->fresh()->deleted_at);
     }
 
-    public function test_editor_manages_the_catalogue_but_not_settings_money_or_staff(): void
+    public function test_editor_manages_the_catalogue_but_not_settings_or_staff(): void
     {
         $store = Store::factory()->create();
         $coupon = Coupon::factory()->for($store)->create();

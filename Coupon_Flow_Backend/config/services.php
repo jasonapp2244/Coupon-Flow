@@ -28,15 +28,6 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
-    'stripe' => [
-        'secret' => env('STRIPE_SECRET'),
-        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
-        'api_version' => env('STRIPE_API_VERSION', '2026-08-26.dahlia'),
-        'currency' => strtolower(env('STORE_CURRENCY', 'usd')),
-        // Checkout Sessions expire after this many minutes; reserved stock is released on expiry.
-        'session_ttl_minutes' => (int) env('STRIPE_SESSION_TTL_MINUTES', 30),
-    ],
-
     // First admin account, created by AdminSeeder (read through config so config:cache is safe).
     'admin' => [
         'email' => env('ADMIN_EMAIL', 'admin@couponfollow.com'),

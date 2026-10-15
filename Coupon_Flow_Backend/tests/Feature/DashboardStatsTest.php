@@ -46,7 +46,9 @@ class DashboardStatsTest extends TestCase
         $this->assertSame('Ending', $data['watch']['ending_soon'][0]['title']);
         $this->assertSame('Starting', $data['watch']['starting_soon'][0]['title']);
         $this->assertSame('Broken Brand', $data['feeds'][0]['name']);
-        $this->assertFalse($data['shop_enabled']);
+        $this->assertSame(['total_stores', 'active_coupons', 'total_coupons', 'total_redemptions', 'sales_30d', 'profit_30d_cents'], array_keys($data['kpis']));
+        $this->assertArrayNotHasKey('sales', $data);
+        $this->assertArrayNotHasKey('recent_orders', $data);
         $this->assertTrue($data['two_factor_missing']);
         $this->assertIsArray($data['recent_activity']);
     }

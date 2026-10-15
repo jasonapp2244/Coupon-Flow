@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { CheckCircle2, Copy, ExternalLink, X } from 'lucide-react';
 import { api, ApiError } from '../lib/api';
 import { expiryLabel } from '../lib/format';
-import { goUrl, LEGACY_REVEAL_PARAM, openOut, revealIdFrom } from '../lib/out';
+import { goUrl, latestToken, LEGACY_REVEAL_PARAM, newClaimToken, openOut, rememberToken, revealIdFrom } from '../lib/out';
 import { useSite } from '../store/site';
 import { useToast } from '../store/toast';
 import { Spinner, StoreLogo } from './States';
@@ -19,6 +19,7 @@ export default function CouponRevealModal() {
   const navigate = useNavigate();
   const id = revealIdFrom(hash, search);
   const [coupon, setCoupon] = useState<RevealedCoupon | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const toast = useToast();
   const { timezone } = useSite();
@@ -40,19 +41,36 @@ export default function CouponRevealModal() {
     navigate({ pathname: window.location.pathname, search: rest ? `?${rest}` : '', hash: '' }, { replace: true, preventScrollReset: true });
   };
 
-  useEffect(() => {
-    if (!id) { setCoupon(null); return; }
-    let live = true;
+  // Each fetch gets a number; only the newest one may update the pop-up.
+  const request = useRef(0);
+  const load = (couponId: number, claim: string | null) => {
+    const mine = ++request.current;
+    setToken(claim);
     setCoupon(null);
-    api.get<{ data: RevealedCoupon }>(`/public/coupons/${id}/reveal`)
-      .then(res => { if (live) setCoupon(res.data); })
+    const path = `/public/coupons/${couponId}/reveal${claim ? `?t=${encodeURIComponent(claim)}` : ''}`;
+    api.get<{ data: RevealedCoupon }>(path)
+      .then(res => { if (mine === request.current) setCoupon(res.data); })
       .catch((e: unknown) => {
-        if (!live) return;
+        if (mine !== request.current) return;
         toast(e instanceof ApiError && e.status === 404 ? 'This offer is no longer available.' : "Couldn't load this offer. Please try again.", 'error');
         close();
       });
-    return () => { live = false; };
+  };
+
+  useEffect(() => {
+    if (!id) { request.current++; setCoupon(null); setToken(null); return; }
+    // The claim the coupon row just made (or the one from before a refresh): same token, same code.
+    load(id, latestToken(id));
   }, [id]); // Only a new coupon id should refetch.
+
+  /** Code list: a new claim takes the next code. Opens the store inside the click, so pop-up blockers allow it. */
+  const claimAnother = () => {
+    if (!id) return;
+    const claim = newClaimToken();
+    rememberToken(id, claim);
+    openOut(goUrl(id, claim));
+    load(id, claim);
+  };
 
   // showModal gives the focus trap, Esc to close and the backdrop for free.
   useEffect(() => {
@@ -95,18 +113,45 @@ export default function CouponRevealModal() {
                   <Copy size={14} aria-hidden="true" /> Click To Copy and Paste Code At Checkout
                 </p>
               </div>
+            ) : coupon.code_list ? (
+              !coupon.limit_reached && (
+                <p className="rounded-lg bg-deal-soft px-4 py-3 font-semibold text-deal-dark">
+                  {token ? 'All codes for this offer have been given out.' : 'Each shopper gets their own code.'}
+                </p>
+              )
             ) : (
               <p className="flex items-center gap-2 rounded-lg bg-deal-soft px-4 py-3 font-semibold text-deal-dark">
                 <CheckCircle2 size={18} aria-hidden="true" /> No Code Required
               </p>
             )}
 
+            {coupon.code_list && coupon.limit_reached && (
+              <p role="status" className="rounded-lg bg-raspberry/10 px-4 py-3 text-sm font-semibold text-raspberry">
+                You've reached today's limit for this coupon. Try again tomorrow.
+              </p>
+            )}
+
             {coupon.description && <p className="text-sm text-ink-soft">{coupon.description}</p>}
 
-            <button onClick={() => openOut(goUrl(coupon.id))} className="btn-primary w-full justify-center">
-              {coupon.code ? 'Continue to' : 'Shop now at'} {coupon.store?.name ?? 'the store'}
-              <ExternalLink size={14} aria-hidden="true" /><span className="sr-only">(opens in a new tab)</span>
-            </button>
+            {coupon.code_list && !coupon.limit_reached && !coupon.code && !token ? (
+              // A shared link: no claim yet, so the first click takes a code.
+              <button onClick={claimAnother} className="btn-primary w-full justify-center">
+                Get your code
+                <ExternalLink size={14} aria-hidden="true" /><span className="sr-only">(opens {coupon.store?.name ?? 'the store'} in a new tab)</span>
+              </button>
+            ) : (
+              <button onClick={() => openOut(goUrl(coupon.id, token))} className="btn-primary w-full justify-center">
+                {coupon.code ? 'Continue to' : 'Shop now at'} {coupon.store?.name ?? 'the store'}
+                <ExternalLink size={14} aria-hidden="true" /><span className="sr-only">(opens in a new tab)</span>
+              </button>
+            )}
+
+            {coupon.code_list && !coupon.limit_reached && coupon.code && (
+              <button onClick={claimAnother} className="w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-deal-dark ring-1 ring-line hover:bg-deal-soft">
+                Get another code
+                <span className="sr-only"> (opens {coupon.store?.name ?? 'the store'} in a new tab)</span>
+              </button>
+            )}
           </div>
         )}
       </div>

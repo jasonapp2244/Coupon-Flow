@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router';
 import {
   LayoutDashboard, Store, Tag, FileText, BarChart2, Plug, Settings, ChevronDown, ChevronRight,
   Bell, HelpCircle, Search, X, Menu, User, LogOut, ShoppingCart, Clock, Trash2,
-  ChevronLeft, Ticket, FolderOpen, Receipt, ShieldCheck, Users, History,
+  ChevronLeft, Ticket, FolderOpen, ShieldCheck, Users, History,
 } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { allows, ROLE_LABELS, type Permission } from '../lib/permissions';
@@ -38,7 +38,6 @@ const navItems: NavItem[] = [
       { label: 'All Coupons', path: '/coupons', icon: <Tag size={14} /> },
       { label: 'Create Coupon', path: '/coupons/new', icon: <Ticket size={14} />, need: 'write' },
       { label: 'Ended Coupons', path: '/coupons/expired', icon: <Clock size={14} /> },
-      { label: 'Orders', path: '/orders', icon: <Receipt size={14} /> },
       { label: 'Redemptions', path: '/redemptions', icon: <ShoppingCart size={14} /> },
     ],
   },
@@ -88,7 +87,6 @@ const breadcrumbRules: [RegExp, string[]][] = [
   [/^\/coupons\/new$/, ['Coupons', 'Create Coupon']],
   [/^\/coupons\/\d+\/edit$/, ['Coupons', 'Edit Coupon']],
   [/^\/coupons\/expired$/, ['Coupons', 'Ended Coupons']],
-  [/^\/orders$/, ['Coupons', 'Orders']],
   [/^\/redemptions$/, ['Coupons', 'Redemptions']],
   [/^\/blogs$/, ['Blogs', 'All Blogs']],
   [/^\/blogs\/new$/, ['Blogs', 'Create Blog']],

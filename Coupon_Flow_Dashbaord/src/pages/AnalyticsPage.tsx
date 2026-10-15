@@ -1,20 +1,17 @@
 import { useState } from 'react';
 import { Download, RotateCcw, RefreshCw } from 'lucide-react';
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Card, Button, PageHeader } from '../components/ui';
 import { FormLoadState } from '../components/FormParts';
 import { StateBadge, UsageBar } from '../components/CouponUsage';
 import { api, withQuery } from '../lib/api';
 import { StorePicker } from '../components/StorePicker';
 import { useApi } from '../lib/hooks';
-import { date, money, number, tooltipMoney, tooltipNumber } from '../lib/format';
+import { date, money, number, tooltipNumber } from '../lib/format';
 import { useApp } from '../store/AppContext';
-import type { AnalyticsData } from '../lib/types';
+import type { AnalyticsData, StoreProfit } from '../lib/types';
 
 const RANGES = [{ label: '7 Days', days: 7 }, { label: '30 Days', days: 30 }, { label: '3 Months', days: 90 }, { label: '12 Months', days: 365 }];
-const METRICS = { Revenue: { key: 'revenue', color: '#10B981' }, Orders: { key: 'orders', color: '#2563EB' } } as const;
-type Metric = keyof typeof METRICS;
-type View = 'uses' | 'sales';
 
 const selectClass = 'px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg outline-none text-slate-600 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all';
 const tooltipStyle = { background: '#0F172A', border: 'none', borderRadius: 8, color: '#F1F5F9', fontSize: 12 };
@@ -97,106 +94,59 @@ function UsesView({ data, range }: { data: AnalyticsData; range: string }) {
           </table>
         </div>
       </Card>
+
+      <ProfitByStore rows={data.profit_by_store ?? []} range={range} />
     </>
   );
 }
 
-function SalesView({ data, range }: { data: AnalyticsData; range: string }) {
-  const [metric, setMetric] = useState<Metric>('Revenue');
-  const sales = data.sales;
-  const totals = sales.reduce((t, p) => ({ orders: t.orders + p.orders, revenue: t.revenue + p.revenue_cents }), { orders: 0, revenue: 0 });
-  const best = sales.reduce<(typeof sales)[number] | null>((b, p) => (!b || p.revenue_cents > b.revenue_cents ? p : b), null);
-  const rows = sales.map(p => ({ date: shortDate(p.date), orders: p.orders, revenue: p.revenue_cents / 100 }));
-  const topStores = data.top_stores;
-  const { key, color } = METRICS[metric];
+/** Confirmed sales and the profit they earned, per store, best first. */
+function ProfitByStore({ rows, range }: { rows: StoreProfit[]; range: string }) {
+  const sorted = [...rows].sort((a, b) => b.profit_cents - a.profit_cents);
+  const totals = rows.reduce((t, r) => ({ sales: t.sales + r.sales, order: t.order + r.order_value_cents, profit: t.profit + r.profit_cents }), { sales: 0, order: 0, profit: 0 });
 
   return (
-    <>
-      <Kpis range={range} items={[
-        { label: 'Paid Orders', value: number(totals.orders) },
-        { label: 'Revenue', value: money(totals.revenue) },
-        { label: 'Average Order', value: totals.orders ? money(Math.round(totals.revenue / totals.orders)) : '—' },
-        { label: 'Best Day', value: best && best.revenue_cents > 0 ? `${date(best.date)} · ${money(best.revenue_cents)}` : '—' },
-      ]} />
-
-      <Card padding={false}>
-        <div className="p-5 pb-0 flex items-center justify-between flex-wrap gap-3">
-          <h2 className="text-sm font-semibold text-slate-800">Exclusive Code Sales: {range}</h2>
-          <div className="flex gap-1">
-            {(Object.keys(METRICS) as Metric[]).map(m => (
-              <button key={m} onClick={() => setMetric(m)}
-                style={metric === m ? { backgroundColor: METRICS[m].color + '18', color: METRICS[m].color, borderColor: METRICS[m].color } : {}}
-                className={`px-3 py-1 text-xs font-medium rounded-md border transition-colors ${metric === m ? '' : 'text-slate-500 border-slate-200 hover:bg-slate-50'}`}>{m}</button>
-            ))}
-          </div>
-        </div>
-        <div className="px-2 pb-4 pt-3 relative">
-          {totals.orders === 0 && <p className="absolute inset-0 flex items-center justify-center text-xs text-slate-400 z-10">No paid orders in this period</p>}
-          <ResponsiveContainer width="100%" height={240}>
-            <AreaChart data={rows} margin={{ top: 4, right: 16, left: -8, bottom: 0 }}>
-              <defs>
-                <linearGradient id="analyticsGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={color} stopOpacity={0.15} />
-                  <stop offset="95%" stopColor={color} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} minTickGap={24} />
-              <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} allowDecimals={metric === 'Revenue'} />
-              <Tooltip contentStyle={tooltipStyle} formatter={metric === 'Revenue' ? tooltipMoney : tooltipNumber} />
-              <Area type="monotone" dataKey={key} name={metric} stroke={color} strokeWidth={2} fill="url(#analyticsGrad)" dot={false} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <Card padding={false}>
-          <div className="p-5 pb-3 border-b border-slate-100"><h2 className="text-sm font-semibold text-slate-800">Top Stores</h2></div>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs text-slate-400 font-medium border-b border-slate-100">
-                {['Store', 'Orders', 'Revenue', 'Share'].map(h => <th key={h} className="px-5 py-3 text-left">{h}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {topStores.length === 0 && <tr><td colSpan={4} className="px-5 py-10 text-center text-xs text-slate-400">No sales in this period</td></tr>}
-              {topStores.map(s => (
-                <tr key={s.store_id} className="border-b border-slate-50 last:border-0">
-                  <td className="px-5 py-3 font-medium text-slate-800">{s.store}</td>
-                  <td className="px-5 py-3 text-slate-600">{number(s.orders)}</td>
-                  <td className="px-5 py-3 font-semibold text-slate-800">{money(s.revenue_cents)}</td>
-                  <td className="px-5 py-3 text-emerald-600 font-medium">{totals.revenue ? `${((s.revenue_cents / totals.revenue) * 100).toFixed(1)}%` : '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-
-        <Card padding={false}>
-          <div className="p-5 pb-3 border-b border-slate-100"><h2 className="text-sm font-semibold text-slate-800">Revenue by Store</h2></div>
-          <div className="px-2 py-4">
-            {topStores.length === 0 ? <p className="h-[220px] flex items-center justify-center text-xs text-slate-400">No sales in this period</p> : (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={topStores.map(s => ({ store: s.store, revenue: s.revenue_cents / 100 }))} margin={{ top: 0, right: 8, left: -8, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-                  <XAxis dataKey="store" tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={tooltipStyle} formatter={tooltipMoney} />
-                  <Bar dataKey="revenue" name="Revenue" fill="#10B981" radius={[3, 3, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </Card>
+    <Card padding={false}>
+      <div className="p-5 pb-3 border-b border-slate-100">
+        <h2 className="text-sm font-semibold text-slate-800">Profit by Store: {range}</h2>
+        <p className="text-xs text-slate-400 mt-0.5">Sales confirmed on the Redemptions page, and the commission they earned.</p>
       </div>
-    </>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-xs text-slate-400 font-medium border-b border-slate-100">
+              {['Store', 'Sales', 'Order value', 'Profit'].map(h => <th key={h} className="px-5 py-3 text-left whitespace-nowrap">{h}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.length === 0 && <tr><td colSpan={4} className="px-5 py-10 text-center text-xs text-slate-400">No confirmed sales in this period</td></tr>}
+            {sorted.map(r => (
+              <tr key={r.store_id} className="border-b border-slate-50 last:border-0">
+                <td className="px-5 py-3 font-medium text-slate-800">{r.store}</td>
+                <td className="px-5 py-3 text-slate-700">{number(r.sales)}</td>
+                <td className="px-5 py-3 text-slate-700">{money(r.order_value_cents)}</td>
+                <td className="px-5 py-3 font-semibold text-emerald-600">{money(r.profit_cents)}</td>
+              </tr>
+            ))}
+          </tbody>
+          {sorted.length > 1 && (
+            <tfoot>
+              <tr className="border-t border-slate-200 bg-slate-50/60 text-xs font-semibold text-slate-700">
+                <td className="px-5 py-3">Total</td>
+                <td className="px-5 py-3">{number(totals.sales)}</td>
+                <td className="px-5 py-3">{money(totals.order)}</td>
+                <td className="px-5 py-3 text-emerald-700">{money(totals.profit)}</td>
+              </tr>
+            </tfoot>
+          )}
+        </table>
+      </div>
+    </Card>
   );
 }
 
 export default function AnalyticsPage() {
   const { showToast } = useApp();
-  const [view, setView] = useState<View>('uses');
   const [days, setDays] = useState(30);
   const [storeId, setStoreId] = useState('All');
   const [exporting, setExporting] = useState(false);
@@ -223,7 +173,7 @@ export default function AnalyticsPage() {
     <div className="space-y-5">
       <PageHeader
         title="Analytics"
-        subtitle="Coupon uses and, when exclusive codes are sold, card sales"
+        subtitle="Coupon uses per day, the most-used coupons and profit by store"
         actions={
           <div className="flex items-center gap-2 flex-wrap">
             {isFiltered && (
@@ -242,16 +192,9 @@ export default function AnalyticsPage() {
         }
       />
 
-      <div className="flex gap-1 rounded-lg bg-slate-100 p-1 w-fit" role="tablist" aria-label="Report">
-        {([['uses', 'Coupon uses'], ['sales', 'Sales']] as [View, string][]).map(([v, label]) => (
-          <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)}
-            className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${view === v ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>{label}</button>
-        ))}
-      </div>
-
       {!data ? <FormLoadState loading={loading} error={error} onRetry={reload} /> : (
         <div className={`space-y-5 transition-opacity ${loading ? 'opacity-60' : ''}`}>
-          {view === 'uses' ? <UsesView data={data} range={range} /> : <SalesView data={data} range={range} />}
+          <UsesView data={data} range={range} />
         </div>
       )}
     </div>

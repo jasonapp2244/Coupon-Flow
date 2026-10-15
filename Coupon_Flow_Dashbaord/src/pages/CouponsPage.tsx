@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { Plus, Star, CheckCircle, Zap, Eye, Edit, Copy, Trash2, X, RotateCcw } from 'lucide-react';
 import { Badge, Card, Button, statusBadge, Checkbox, PageHeader } from '../components/ui';
-import { StateBadge, UsageBar } from '../components/CouponUsage';
+import { CodesLeftBar, StateBadge, UsageBar } from '../components/CouponUsage';
 import { ConfirmModal, Drawer } from '../components/Modal';
 import { Pagination, RowMenu, RowMenuItem, SearchInput, SortableTh, TableBodyState, filterSelectClass } from '../components/DataTable';
 import { api, forEachId } from '../lib/api';
 import { StorePicker } from '../components/StorePicker';
 import { useAction, useApi, useApiList, useDebounced, useListControls } from '../lib/hooks';
-import { dateTimeFull, money, number, plural, timeUntil } from '../lib/format';
+import { dateTimeFull, plural, timeUntil } from '../lib/format';
 import { useCan } from '../store/AppContext';
 import type { Coupon, FeedSource } from '../lib/types';
 
@@ -38,10 +38,6 @@ const typeColor: Record<string, string> = {
   'No Code Required': 'bg-emerald-50 text-emerald-700',
 };
 
-function priceLabel(c: Coupon) {
-  return c.price_cents > 0 ? money(c.price_cents, c.currency) : 'Free';
-}
-
 function CouponDrawer({ coupon, onClose, onEdit }: { coupon: Coupon; onClose: () => void; onEdit?: () => void }) {
   return (
     <Drawer open title="Coupon Details" onClose={onClose} width="w-80">
@@ -50,14 +46,17 @@ function CouponDrawer({ coupon, onClose, onEdit }: { coupon: Coupon; onClose: ()
           ['Offer', coupon.title],
           ['Store', coupon.store ?? '—'],
           ['Type', coupon.type],
-          ['Code', coupon.unique_codes ? 'Unique code per buyer' : coupon.code ? <code className="font-mono bg-slate-100 px-1.5 py-0.5 rounded">{coupon.code}</code> : '—'],
-          ['Price', priceLabel(coupon)],
-          ['Stock', coupon.stock === null ? 'Unlimited' : coupon.unique_codes ? `${number(coupon.stock)} unsold codes` : number(coupon.stock)],
+          ['Code', coupon.unique_codes
+            ? `Code list${coupon.max_codes_per_visitor ? ` · max ${coupon.max_codes_per_visitor} a day per visitor` : ' · no daily limit'}`
+            : coupon.code ? <code className="font-mono bg-slate-100 px-1.5 py-0.5 rounded">{coupon.code}</code> : '—'],
           ['State', <StateBadge state={coupon.state} />],
           ['Status', statusBadge(coupon.status)],
           ['Starts', coupon.starts_at ? dateTimeFull(coupon.starts_at) : 'Straight away'],
           ['Ends', coupon.expires_at ? dateTimeFull(coupon.expires_at) : 'No end date'],
-          ['Uses', <UsageBar uses={coupon.uses_count} limit={coupon.usage_limit} percent={coupon.used_percent} />],
+          ['Uses', coupon.unique_codes
+            ? <CodesLeftBar left={coupon.codes_left} total={coupon.codes_total} />
+            : <UsageBar uses={coupon.uses_count} limit={coupon.usage_limit} percent={coupon.used_percent} />],
+          ['Commission', coupon.commission_percent != null ? `${coupon.commission_percent}% (this coupon)` : 'Store rate'],
           ['Source', coupon.feed_source ? `${coupon.feed_source}${coupon.external_id ? ` (${coupon.external_id})` : ''}` : 'Added by hand'],
           ['Featured', coupon.is_featured ? '✓ Yes' : 'No'],
           ['Verified', coupon.is_verified ? '✓ Yes' : 'No'],
@@ -99,7 +98,6 @@ export default function CouponsPage({ expiredOnly = false }: { expiredOnly?: boo
   const [usage, setUsage] = useState(params.get('near') === '1' ? 'near' : 'All');
   const [source, setSource] = useState(params.get('feed_source_id') ?? 'All');
   const [featured, setFeatured] = useState('All');
-  const [pricing, setPricing] = useState('All');
   const [selected, setSelected] = useState<number[]>([]);
   const [openMenu, setOpenMenu] = useState<number | null>(null);
   const [viewCoupon, setViewCoupon] = useState<Coupon | null>(null);
@@ -117,12 +115,11 @@ export default function CouponsPage({ expiredOnly = false }: { expiredOnly?: boo
     feed_source_id: source,
     expired: expiredOnly || undefined,
     is_featured: featured === 'All' ? undefined : featured === 'Yes',
-    is_paid: pricing === 'All' ? undefined : pricing === 'Paid',
   });
 
   const filterChanged = <T,>(set: (v: T) => void) => (v: T) => { set(v); list.setPage(1); setSelected([]); };
-  const hasFilters = search || storeId !== 'All' || type !== 'All' || state !== 'All' || usage !== 'All' || source !== 'All' || featured !== 'All' || pricing !== 'All';
-  const clearFilters = () => { setSearch(''); setStoreId('All'); setType('All'); setState('All'); setUsage('All'); setSource('All'); setFeatured('All'); setPricing('All'); list.setPage(1); };
+  const hasFilters = search || storeId !== 'All' || type !== 'All' || state !== 'All' || usage !== 'All' || source !== 'All' || featured !== 'All';
+  const clearFilters = () => { setSearch(''); setStoreId('All'); setType('All'); setState('All'); setUsage('All'); setSource('All'); setFeatured('All'); list.setPage(1); };
 
   const allSelected = items.length > 0 && items.every(c => selected.includes(c.id));
   const toggleAll = () => setSelected(allSelected ? [] : items.map(c => c.id));
@@ -184,9 +181,6 @@ export default function CouponsPage({ expiredOnly = false }: { expiredOnly?: boo
               {sources.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
           )}
-          <select value={pricing} onChange={e => filterChanged(setPricing)(e.target.value)} className={filterSelectClass} aria-label="Pricing">
-            {['All', 'Paid', 'Free'].map(p => <option key={p} value={p}>{p === 'All' ? 'Price: All' : p}</option>)}
-          </select>
           <select value={featured} onChange={e => filterChanged(setFeatured)(e.target.value)} className={filterSelectClass} aria-label="Featured">
             <option value="All">Featured: All</option><option value="Yes">Featured: Yes</option><option value="No">Featured: No</option>
           </select>
@@ -216,7 +210,6 @@ export default function CouponsPage({ expiredOnly = false }: { expiredOnly?: boo
                 <th className="px-3 py-3 text-left">Store</th>
                 <th className="px-3 py-3 text-left">Type</th>
                 <th className="px-3 py-3 text-left">Code</th>
-                <SortableTh label="Price" field="price_cents" sort={list.sort} dir={list.dir} onSort={list.onSort} className="px-3 py-3" />
                 <SortableTh label="Usage" field="used_percent" sort={list.sort} dir={list.dir} onSort={list.onSort} className="px-3 py-3" />
                 <SortableTh label="Deal window" field="expires_at" sort={list.sort} dir={list.dir} onSort={list.onSort} className="px-3 py-3" />
                 <th className="px-3 py-3 text-left">State</th>
@@ -226,7 +219,7 @@ export default function CouponsPage({ expiredOnly = false }: { expiredOnly?: boo
             </thead>
             <tbody>
               <TableBodyState
-                colSpan={canWrite ? 11 : 10} loading={loading} error={error} empty={items.length === 0}
+                colSpan={canWrite ? 10 : 9} loading={loading} error={error} empty={items.length === 0}
                 emptyIcon={<Star size={22} />} emptyTitle="No coupons found" onRetry={reload}
                 onClear={hasFilters ? clearFilters : undefined}
               />
@@ -244,9 +237,10 @@ export default function CouponsPage({ expiredOnly = false }: { expiredOnly?: boo
                     </div>
                   </td>
                   <td className="px-3 py-3.5"><span className={`text-xs font-medium px-2 py-0.5 rounded-md whitespace-nowrap ${typeColor[coupon.type] ?? 'bg-slate-100 text-slate-600'}`}>{coupon.type}</span></td>
-                  <td className="px-3 py-3.5">{coupon.code ? <code className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-xs font-mono font-medium">{coupon.code}</code> : <span className="text-slate-300 text-xs">—</span>}</td>
-                  <td className="px-3 py-3.5 text-xs font-medium whitespace-nowrap">{coupon.price_cents > 0 ? <span className="text-slate-800">{priceLabel(coupon)}</span> : <span className="text-slate-400">Free</span>}</td>
-                  <td className="px-3 py-3.5"><UsageBar uses={coupon.uses_count} limit={coupon.usage_limit} percent={coupon.used_percent} compact /></td>
+                  <td className="px-3 py-3.5">{coupon.unique_codes ? <span className="text-xs font-medium text-violet-700 whitespace-nowrap">Code list</span> : coupon.code ? <code className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-xs font-mono font-medium">{coupon.code}</code> : <span className="text-slate-300 text-xs">—</span>}</td>
+                  <td className="px-3 py-3.5">{coupon.unique_codes
+                    ? <CodesLeftBar left={coupon.codes_left} total={coupon.codes_total} compact />
+                    : <UsageBar uses={coupon.uses_count} limit={coupon.usage_limit} percent={coupon.used_percent} compact />}</td>
                   <td className="px-3 py-3.5 text-xs text-slate-500 whitespace-nowrap"><DealWindow coupon={coupon} /></td>
                   <td className="px-3 py-3.5">
                     <div className="flex flex-col items-start gap-1">

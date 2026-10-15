@@ -12,10 +12,9 @@ class SiteSettings
 {
     /** @var array<string, array<string, mixed>> group => defaults */
     public const DEFAULTS = [
-        // shop_enabled: sell exclusive (paid) codes with cart, sign-in and card checkout. Off = a plain coupon site.
-        'general' => ['site_name' => 'Coupon Follow', 'support_email' => '', 'timezone' => 'America/New_York', 'shop_enabled' => false],
+        'general' => ['site_name' => 'Coupon Follow', 'support_email' => '', 'timezone' => 'America/New_York'],
         'seo' => ['meta_title' => '', 'meta_description' => '', 'meta_keywords' => ''],
-        'notifications' => ['email' => true, 'sync_alerts' => true, 'redemption_alerts' => false, 'error_alerts' => true],
+        'notifications' => ['email' => true, 'sync_alerts' => true, 'redemption_alerts' => false],
         // require_two_factor: every staff account must set up two-step login before using the admin.
         'security' => ['require_two_factor' => false],
     ];
@@ -48,12 +47,6 @@ class SiteSettings
         $tz = (string) $this->get('general', 'timezone');
 
         return in_array($tz, timezone_identifiers_list(), true) ? $tz : config('app.timezone');
-    }
-
-    /** Whether the public site sells exclusive codes. Off: paid coupons are hidden and checkout is closed. */
-    public function shopEnabled(): bool
-    {
-        return (bool) $this->get('general', 'shop_enabled');
     }
 
     /** Empty until the admin sets one: a no-reply sender address must never be shown as "support". */

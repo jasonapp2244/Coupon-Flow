@@ -19,7 +19,7 @@ class Store extends Model
         'category_id', 'name', 'slug', 'heading', 'description', 'content',
         'direct_url', 'tracking_url', 'logo_path',
         'meta_title', 'meta_description', 'meta_keywords',
-        'is_top', 'is_editor_choice', 'status',
+        'is_top', 'is_editor_choice', 'status', 'commission_percent',
     ];
 
     protected function casts(): array
@@ -28,6 +28,8 @@ class Store extends Model
             'status' => StoreStatus::class,
             'is_top' => 'boolean',
             'is_editor_choice' => 'boolean',
+            // What the store pays on a confirmed sale, e.g. 8.00 (%).
+            'commission_percent' => 'float',
         ];
     }
 

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Enums\Role;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Models\User;
@@ -33,8 +32,9 @@ class AuthController extends Controller
         $user = User::where('email', $data['email'])->first();
         $device = $data['device_name'] ?? 'api';
 
-        if (! $user || ! Hash::check($data['password'], $user->password)) {
-            // Failed staff / admin-dashboard sign-ins go to the activity log; shoppers' don't.
+        // Only staff sign in: the public site has no accounts. Old shopper accounts get the same
+        // answer as a wrong password, so the form doesn't reveal which emails exist.
+        if (! $user || ! $user->isStaff() || ! Hash::check($data['password'], $user->password)) {
             if ($user?->isStaff() || $device === self::ADMIN_DEVICE) {
                 Audit::log('login_failed', $user, ['email' => $data['email']], label: $data['email'], actor: null);
             }
@@ -45,7 +45,7 @@ class AuthController extends Controller
             throw ValidationException::withMessages(['email' => 'This account has been switched off. Ask an admin to turn it back on.']);
         }
 
-        if ($user->isStaff() && $user->hasTwoFactor()) {
+        if ($user->hasTwoFactor()) {
             return response()->json(['two_factor' => true, 'challenge' => $twoFactor->startChallenge($user, $device)]);
         }
 
@@ -87,54 +87,13 @@ class AuthController extends Controller
 
     private function signIn(User $user, string $device): JsonResponse
     {
-        if ($user->isStaff()) {
-            $user->forceFill(['last_login_at' => now()])->save();
-            Audit::log('login', $user, label: $user->email, actor: $user);
-        }
+        $user->forceFill(['last_login_at' => now()])->save();
+        Audit::log('login', $user, label: $user->email, actor: $user);
 
-        return $this->tokenResponse($user, $device);
-    }
-
-    public function register(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:120'],
-            'email' => ['required', 'email', 'max:190', 'unique:users,email'],
-            'password' => ['required', 'confirmed', PasswordRule::min(8)],
+        return response()->json([
+            'token' => $user->createToken($device)->plainTextToken,
+            'user' => new UserResource($user),
         ]);
-
-        $user = new User($data);
-        $user->role = Role::Customer;
-        $user->save();
-        // Codes are emailed after purchase, so the address is confirmed before checkout.
-        $user->sendEmailVerificationNotification();
-
-        return $this->tokenResponse($user, 'api', 201);
-    }
-
-    /** Opened from the emailed link (via the website); the signed URL is the proof, no sign-in needed. */
-    public function verifyEmail(Request $request, int $id, string $hash): JsonResponse
-    {
-        $user = User::findOrFail($id);
-
-        abort_unless(hash_equals(sha1($user->getEmailForVerification()), $hash), 403, 'This verification link is not valid.');
-
-        if (! $user->hasVerifiedEmail()) {
-            $user->markEmailAsVerified();
-        }
-
-        return response()->json(['message' => 'Email confirmed.']);
-    }
-
-    public function resendVerification(Request $request): JsonResponse
-    {
-        if ($request->user()->hasVerifiedEmail()) {
-            return response()->json(['message' => 'Your email is already confirmed.']);
-        }
-
-        $request->user()->sendEmailVerificationNotification();
-
-        return response()->json(['message' => 'We sent a new confirmation link to '.$request->user()->email.'.']);
     }
 
     public function me(Request $request): UserResource
@@ -156,7 +115,10 @@ class AuthController extends Controller
     {
         $request->validate(['email' => ['required', 'email']]);
 
-        Password::sendResetLink($request->only('email'));
+        // Staff only: reset links open the admin dashboard.
+        if (User::where('email', $request->input('email'))->first()?->isStaff()) {
+            Password::sendResetLink($request->only('email'));
+        }
 
         // Same response whether or not the account exists, so emails cannot be enumerated.
         return response()->json(['message' => 'If that email is registered, a reset link has been sent.']);
@@ -184,13 +146,5 @@ class AuthController extends Controller
         }
 
         return response()->json(['message' => __($status)]);
-    }
-
-    private function tokenResponse(User $user, string $device, int $status = 200): JsonResponse
-    {
-        return response()->json([
-            'token' => $user->createToken($device)->plainTextToken,
-            'user' => new UserResource($user),
-        ], $status);
     }
 }

@@ -8,7 +8,6 @@ use App\Enums\StoreStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Blog;
 use App\Models\Coupon;
-use App\Models\OrderItem;
 use App\Models\Store;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
@@ -62,15 +61,7 @@ class TrashController extends Controller
 
     public function destroy(string $type, int $id): JsonResponse
     {
-        $model = $this->findTrashed($type, $id);
-
-        if ($this->hasOrders($type, $model)) {
-            return response()->json([
-                'message' => 'This item has paid orders and cannot be permanently deleted.',
-            ], 409);
-        }
-
-        $model->forceDelete();
+        $this->findTrashed($type, $id)->forceDelete();
 
         return response()->json(['message' => 'Item permanently deleted.']);
     }
@@ -80,7 +71,6 @@ class TrashController extends Controller
         $request->validate(['type' => ['nullable', Rule::in(array_keys(self::TYPES))]]);
 
         $purged = 0;
-        $kept = 0;
 
         foreach (self::TYPES as $type => $class) {
             if ($request->filled('type') && $request->input('type') !== $type) {
@@ -88,20 +78,14 @@ class TrashController extends Controller
             }
 
             foreach ($class::onlyTrashed()->get() as $model) {
-                if ($this->hasOrders($type, $model)) {
-                    $kept++;
-
-                    continue;
-                }
                 $model->forceDelete();
                 $purged++;
             }
         }
 
         return response()->json([
-            'message' => $kept ? "{$purged} item(s) deleted; {$kept} kept because they have orders." : "{$purged} item(s) deleted.",
+            'message' => "{$purged} item(s) deleted.",
             'purged' => $purged,
-            'kept' => $kept,
         ]);
     }
 
@@ -110,15 +94,5 @@ class TrashController extends Controller
         abort_unless(isset(self::TYPES[$type]), 404);
 
         return self::TYPES[$type]::onlyTrashed()->findOrFail($id);
-    }
-
-    /** Order history must survive: sold coupons (and the stores that own them) are never hard-deleted. */
-    private function hasOrders(string $type, Model $model): bool
-    {
-        return match ($type) {
-            'coupon' => OrderItem::where('coupon_id', $model->id)->exists(),
-            'store' => OrderItem::whereIn('coupon_id', Coupon::withTrashed()->where('store_id', $model->id)->select('id'))->exists(),
-            default => false,
-        };
     }
 }

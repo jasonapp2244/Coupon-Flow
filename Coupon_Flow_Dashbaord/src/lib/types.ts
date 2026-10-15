@@ -4,7 +4,6 @@ export type StoreStatus = 'Active' | 'Inactive' | 'Draft';
 export type CouponStatus = 'Active' | 'Inactive' | 'Expired' | 'Scheduled' | 'Draft';
 export type CouponType = 'Coupon Code' | 'Deal' | 'No Code Required';
 export type BlogStatus = 'Published' | 'Draft' | 'Archived';
-export type OrderStatus = 'pending' | 'paid' | 'failed' | 'expired' | 'refunded';
 export type CategoryType = 'store' | 'blog';
 export type TrashType = 'store' | 'coupon' | 'blog';
 
@@ -28,8 +27,8 @@ export interface User {
   id: number;
   name: string;
   email: string;
-  role: StaffRole | 'customer';
-  /** Staff only: two-step login is on. */
+  role: StaffRole;
+  /** Two-step login is on. */
   two_factor?: boolean;
   created_at: string | null;
 }
@@ -109,6 +108,8 @@ export interface Store {
   meta_keywords: string | null;
   is_top: boolean;
   is_editor_choice: boolean;
+  /** What the store pays on a confirmed sale, 0-100 (2 decimals); null = not set. */
+  commission_percent: number | null;
   status: StoreStatus;
   coupons_count?: number;
   /** Visitor star rating from the public store page. */
@@ -161,17 +162,40 @@ export interface Coupon {
   is_featured: boolean;
   is_verified: boolean;
   is_exclusive: boolean;
-  price_cents: number;
-  currency: string;
-  stock: number | null;
-  /** Units held by unpaid checkouts (edit view only). */
-  reserved_stock?: number;
-  /** Each buyer gets their own code from the pool; stock is then the count of unsold codes. */
+  /**
+   * Code list: each click gets the next unused code from the coupon's list. Then `uses_left` is
+   * the codes left, `used_percent` the share used, and `usage_limit` is ignored.
+   */
   unique_codes: boolean;
-  /** Pool counts (edit view only). Unsold includes codes held by unpaid checkouts. */
-  codes_available?: number;
-  codes_sold?: number;
+  codes_total: number;
+  codes_left: number;
+  /** Codes one visitor may take per day; 0 = no limit. */
+  max_codes_per_visitor: number;
+  /** Overrides the store's commission rate for this coupon; null = use the store's. */
+  commission_percent: number | null;
   updated_at: string | null;
+}
+
+/** One code of a code-list coupon. */
+export interface CouponCodeEntry {
+  id: number;
+  code: string;
+  used: boolean;
+  assigned_at: string | null;
+  redemption_reference: string | null;
+}
+
+export interface CouponCodeList {
+  data: CouponCodeEntry[];
+  meta: Pick<PageMeta, 'current_page' | 'last_page' | 'per_page' | 'total'>;
+  counts: { total: number; left: number };
+}
+
+export interface CouponCodesAdded {
+  added: number;
+  skipped: number;
+  total: number;
+  left: number;
 }
 
 export interface Blog {
@@ -193,37 +217,6 @@ export interface Blog {
   updated_at: string | null;
 }
 
-export interface OrderItem {
-  coupon_id: number;
-  title: string;
-  unit_price_cents: number;
-  quantity: number;
-  code: string | null;
-  /** Paid, but the coupon's code pool ran out; adding codes delivers it. */
-  code_pending: boolean;
-}
-
-export interface CouponCode {
-  id: number;
-  code: string;
-  status: 'available' | 'sold';
-  order_id: number | null;
-  assigned_at: string | null;
-}
-
-export interface Order {
-  id: number;
-  status: OrderStatus;
-  email: string;
-  customer?: string | null;
-  total_cents: number;
-  currency: string;
-  paid_at: string | null;
-  refunded_at: string | null;
-  created_at: string | null;
-  items?: OrderItem[];
-}
-
 export interface Redemption {
   id: number;
   reference: string;
@@ -237,6 +230,27 @@ export interface Redemption {
   redeemed_at: string | null;
   status: 'Clicked' | 'Pending' | 'Used' | 'Failed' | 'Expired';
   tracking_id: string | null;
+  coupon_id: number | null;
+  /** The rate the profit was worked out with (coupon override, else the store's); null = none set. */
+  commission_percent: number | null;
+}
+
+export interface RedemptionSummary {
+  total: number;
+  by_status: Record<Redemption['status'], number>;
+  order_value_cents: number;
+  /** The profit: commission on confirmed sales. */
+  commission_cents: number;
+  /** Confirmed sales per click, 0-100, one decimal. */
+  conversion_rate: number;
+}
+
+export interface StoreProfit {
+  store_id: number;
+  store: string;
+  sales: number;
+  order_value_cents: number;
+  profit_cents: number;
 }
 
 export interface SyncRun {
@@ -273,19 +287,6 @@ export interface AppNotification {
   created_at: string;
 }
 
-export interface SalesPoint {
-  date: string;
-  orders: number;
-  revenue_cents: number;
-}
-
-export interface TopStore {
-  store_id: number;
-  store: string;
-  orders: number;
-  revenue_cents: number;
-}
-
 export interface UsesPoint {
   date: string;
   uses: number;
@@ -315,7 +316,6 @@ export interface FeedHealth {
 }
 
 export interface DashboardData {
-  shop_enabled: boolean;
   usage: {
     uses_today: number;
     uses_7d: number;
@@ -340,15 +340,11 @@ export interface DashboardData {
     total_stores: number;
     active_coupons: number;
     total_coupons: number;
-    paid_coupons: number;
     total_redemptions: number;
-    paid_orders: number;
-    revenue_cents: number;
-    customers: number;
+    /** Commission on sales confirmed in the last 30 days. */
+    profit_30d_cents: number;
+    sales_30d: number;
   };
-  sales: SalesPoint[];
-  top_stores: TopStore[];
-  recent_orders: Order[];
   recent_redemptions: Redemption[];
 }
 
@@ -357,13 +353,13 @@ export interface AnalyticsData {
   store_id: number | null;
   uses: UsesPoint[];
   top_coupons: CouponUsage[];
-  sales: SalesPoint[];
-  top_stores: TopStore[];
+  /** Confirmed sales and profit per store in the period. */
+  profit_by_store: StoreProfit[];
 }
 
 export interface Settings {
-  general: { site_name: string; support_email: string; timezone: string; shop_enabled: boolean };
+  general: { site_name: string; support_email: string; timezone: string };
   seo: { meta_title: string; meta_description: string; meta_keywords: string };
-  notifications: { email: boolean; sync_alerts: boolean; redemption_alerts: boolean; error_alerts: boolean };
+  notifications: { email: boolean; sync_alerts: boolean; redemption_alerts: boolean };
   security: { require_two_factor: boolean };
 }

@@ -1,8 +1,9 @@
 # Coupon Follow — public website
 
-The shopper-facing site: browse stores and coupons, copy free codes, buy exclusive codes by card
-(Stripe Checkout), and keep purchased codes under **My orders**. It talks only to the Laravel API in
-`../Coupon_Flow_Backend` (`/api/v1/public/*`, auth and customer endpoints).
+The shopper-facing site: a plain coupon site. Browse stores and coupons, click "Show coupon code" or
+"Get deal" (the store opens in a new tab and the code pop-up waits here). No cart, checkout, sign-in or
+accounts: those were removed on 2026-10-15. It talks only to the Laravel API in
+`../Coupon_Flow_Backend` (`/api/v1/public/*`).
 
 Stack: React 19, Vite 8, Tailwind CSS 4, React Router 7 (real paths such as `/stores/nike`).
 
@@ -15,23 +16,17 @@ npx pnpm@10.34.3 dev          # http://127.0.0.1:5173  (must match the API's FRO
 npx pnpm@10.34.3 build        # type-check + production build into dist/
 ```
 
-Test shopper (local seed only): `tauseefchoohan0401@gmail.com` / `Customer1234`.
-
 ## Pages
 
 | Path | Purpose |
 |---|---|
-| `/` | Search, featured coupons, top stores, how exclusive codes work, latest articles |
-| `/coupons` | All live coupons; `?q=`, `?kind=free\|paid`, `?category=`, `?order=`, `?verified=1`, `?page=` |
-| `/stores`, `/stores/:slug` | Stores A to Z (letter index, category, sort) and a store page (free + exclusive codes, about, similar stores) |
+| `/` | Search, featured coupons, top stores, how it works, latest articles |
+| `/coupons` | All live coupons; `?q=`, `?category=`, `?order=`, `?verified=1`, `?page=` |
+| `/stores`, `/stores/:slug` | Stores A to Z (letter index, category, sort) and a store page (codes and deals, rating, top stores); `/promotions/at/:slug` is the same page |
 | `/categories`, `/categories/:slug` | Store categories with their stores and latest coupons |
 | `/blog`, `/blog/:slug` | Shopping guides with search; plain text with `## headings` and `- lists`, never rendered as HTML |
-| `/cart` | Exclusive codes waiting for checkout (kept in the browser; server re-checks price and stock) |
-| `/checkout/success`, `/checkout/cancel` | Stripe return pages (success polls until the webhook marks the order paid) |
-| `/account`, `/account/orders`, `/account/orders/:id` | Account overview, profile and password, purchased codes with receipt |
-| `/verify-email` | Opens the emailed confirmation link (only links to our own API are followed) |
-| `/about`, `/contact`, `/refund-policy`, `/terms`, `/privacy`, `/affiliate-disclosure` | Info and legal pages (template wording: have it reviewed before launch) |
-| `/login`, `/register`, `/forgot-password`, `/reset-password` | Shopper accounts (admins are refused) |
+| `/about`, `/contact`, `/terms`, `/privacy`, `/affiliate-disclosure` | Info and legal pages (template wording: have it reviewed before launch) |
+| `/cart`, `/login`, `/register`, `/account/*`, `/checkout/*`, `/refund-policy`, … | Old shop pages: redirect to the home page |
 
 ## Deploying to SiteGround
 
@@ -46,13 +41,13 @@ Both variables are required for production builds. The build also writes `dist/s
 category and article URLs from the live API, when it can be reached) and `dist/robots.txt`.
 
 Every page in the sitemap is pre-rendered for SEO (home; the stores, coupons, blog and categories lists;
-the static pages; every store, category and article; not cart, sign-in or account pages):
+the static pages; every store, category and article):
 `src/entry-server.tsx` is built with `vite build --ssr`, then `scripts/prerender.mjs` renders each one
 into `dist/_prerender{path}.html` (home: `dist/_prerender/index.html`) with its markup,
 title/description/canonical/Open Graph/JSON-LD, and the API data it used. The data is discovered by
 rendering: the render reports the API paths it couldn't answer, the script fetches them and renders
 again. `.htaccess` serves the file at the page's clean URL (`/stores`, `/coupons` and `/blog` only without a
-query string, since their filters live there); the app then mounts over it (no hydration: cart and sign-in are browser-only),
+query string, since their filters live there); the app then mounts over it (no hydration),
 starting from the embedded data and refreshing it. To pre-render another page, add it to `FIXED` or
 `BY_SLUG` in the script. If the API can't be reached the build still succeeds and every page renders in
 the browser. Rebuild after catalogue changes so the snapshots stay current.

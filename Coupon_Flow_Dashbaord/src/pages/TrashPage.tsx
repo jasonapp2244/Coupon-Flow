@@ -44,9 +44,9 @@ export default function TrashPage() {
   const handleEmpty = async () => {
     setConfirmEmpty(false);
     try {
-      // The API's message says how many items it kept (sold coupons are never purged).
-      const res = await api.delete<{ message: string; kept: number }>(`/admin/trash?type=${activeTab}`);
-      showToast(res.kept > 0 ? 'warning' : 'success', res.message);
+      // The API's message says how many items were purged.
+      const res = await api.delete<{ message: string; purged: number }>(`/admin/trash?type=${activeTab}`);
+      showToast('success', res.message);
       reload();
     } catch (e) {
       showToast('error', (e as Error).message);
@@ -137,7 +137,7 @@ export default function TrashPage() {
         onClose={() => setConfirmEmpty(false)}
         onConfirm={handleEmpty}
         title={`Empty ${tab.label} Trash?`}
-        message="All items in this section will be permanently deleted. Coupons that have been sold are kept to preserve order history."
+        message="All items in this section will be permanently deleted."
         confirmLabel="Empty Trash"
       />
     </div>

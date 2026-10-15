@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 
 /**
  * Writes the admin activity log. Model changes arrive through the LogsActivity trait; sign-ins,
- * refunds, imports and other actions call log() directly.
+ * settings, imports and other actions call log() directly.
  */
 class Audit
 {

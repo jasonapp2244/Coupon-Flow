@@ -3,21 +3,16 @@
 namespace App\Services;
 
 use App\Enums\CouponStatus;
-use App\Enums\OrderStatus;
 use App\Enums\RedemptionStatus;
-use App\Enums\Role;
 use App\Enums\SyncStatus;
 use App\Models\Coupon;
 use App\Models\FeedSource;
-use App\Models\Order;
 use App\Models\Redemption;
 use App\Models\Store;
 use App\Models\SyncRun;
-use App\Models\User;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonPeriod;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
-use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -26,56 +21,33 @@ class DashboardStats
     /** @return array<string, int> */
     public function kpis(): array
     {
-        $paid = Order::where('status', OrderStatus::Paid);
+        $sales30d = Redemption::where('status', RedemptionStatus::Used)->where('redeemed_at', '>=', CarbonImmutable::today()->subDays(29));
 
         return [
             'total_stores' => Store::count(),
             'active_coupons' => Coupon::publiclyVisible()->count(),
             'total_coupons' => Coupon::count(),
-            'paid_coupons' => Coupon::where('price_cents', '>', 0)->count(),
             'total_redemptions' => Redemption::where('status', RedemptionStatus::Used)->count(),
-            'paid_orders' => (clone $paid)->count(),
-            'revenue_cents' => (int) (clone $paid)->sum('total_cents'),
-            'customers' => User::where('role', Role::Customer)->count(),
+            'sales_30d' => (clone $sales30d)->count(),
+            'profit_30d_cents' => (int) (clone $sales30d)->sum('commission_cents'),
         ];
     }
 
     /**
-     * Paid orders and revenue per day, with empty days filled in so charts have no gaps.
+     * Confirmed sales per store in the period (by confirmation date), most profitable first.
      *
-     * @return list<array{date: string, orders: int, revenue_cents: int}>
+     * @return Collection<int, array{store_id: int, store: string, sales: int, order_value_cents: int, profit_cents: int}>
      */
-    public function salesSeries(int $days, ?int $storeId = null): array
+    public function profitByStore(int $days, ?int $storeId = null, int $limit = 20): Collection
     {
-        $from = CarbonImmutable::today()->subDays($days - 1);
-
-        $rows = $this->paidOrdersSince($from, $storeId)
-            ->selectRaw('DATE(orders.paid_at) as day, COUNT(DISTINCT orders.id) as orders, SUM(order_items.unit_price_cents * order_items.quantity) as revenue')
-            ->groupBy('day')
-            ->get()
-            ->keyBy('day');
-
-        return collect(CarbonPeriod::create($from, CarbonImmutable::today()))
-            ->map(function ($date) use ($rows) {
-                $row = $rows->get($date->toDateString());
-
-                return [
-                    'date' => $date->toDateString(),
-                    'orders' => (int) ($row->orders ?? 0),
-                    'revenue_cents' => (int) ($row->revenue ?? 0),
-                ];
-            })
-            ->values()
-            ->all();
-    }
-
-    /** @return Collection<int, array{store_id: int, store: string, orders: int, revenue_cents: int}> */
-    public function topStores(int $days, int $limit = 5, ?int $storeId = null): Collection
-    {
-        $rows = $this->paidOrdersSince(CarbonImmutable::today()->subDays($days - 1), $storeId)
-            ->selectRaw('coupons.store_id, COUNT(DISTINCT orders.id) as orders, SUM(order_items.unit_price_cents * order_items.quantity) as revenue')
-            ->groupBy('coupons.store_id')
-            ->orderByDesc('revenue')
+        $rows = DB::table('redemptions')
+            ->where('status', RedemptionStatus::Used->value)
+            ->where('redeemed_at', '>=', CarbonImmutable::today()->subDays($days - 1))
+            ->whereNotNull('store_id')
+            ->when($storeId, fn ($q) => $q->where('store_id', $storeId))
+            ->selectRaw('store_id, COUNT(*) as sales, SUM(order_value_cents) as order_value, SUM(commission_cents) as profit')
+            ->groupBy('store_id')
+            ->orderByDesc('profit')
             ->limit($limit)
             ->get();
 
@@ -84,9 +56,34 @@ class DashboardStats
         return $rows->map(fn ($row) => [
             'store_id' => (int) $row->store_id,
             'store' => $names[$row->store_id] ?? 'Deleted store',
-            'orders' => (int) $row->orders,
-            'revenue_cents' => (int) $row->revenue,
+            'sales' => (int) $row->sales,
+            'order_value_cents' => (int) $row->order_value,
+            'profit_cents' => (int) $row->profit,
         ]);
+    }
+
+    /**
+     * Confirmed sales and profit per day (by confirmation date), empty days filled in.
+     *
+     * @return array<string, array{sales: int, profit_cents: int}> date => totals
+     */
+    public function salesByDay(int $days, ?int $storeId = null): array
+    {
+        $rows = DB::table('redemptions')
+            ->where('status', RedemptionStatus::Used->value)
+            ->where('redeemed_at', '>=', CarbonImmutable::today()->subDays($days - 1))
+            ->when($storeId, fn ($q) => $q->where('store_id', $storeId))
+            ->selectRaw('DATE(redeemed_at) as day, COUNT(*) as sales, SUM(commission_cents) as profit')
+            ->groupBy('day')
+            ->get()
+            ->keyBy('day');
+
+        return collect(CarbonPeriod::create(CarbonImmutable::today()->subDays($days - 1), CarbonImmutable::today()))
+            ->mapWithKeys(fn ($date) => [$date->toDateString() => [
+                'sales' => (int) ($rows[$date->toDateString()]->sales ?? 0),
+                'profit_cents' => (int) ($rows[$date->toDateString()]->profit ?? 0),
+            ]])
+            ->all();
     }
 
     /**
@@ -222,15 +219,5 @@ class DashboardStats
             'starts_at' => $coupon?->starts_at?->toIso8601String(),
             'expires_at' => $coupon?->expires_at?->toIso8601String(),
         ];
-    }
-
-    private function paidOrdersSince(CarbonImmutable $from, ?int $storeId): Builder
-    {
-        return DB::table('orders')
-            ->join('order_items', 'order_items.order_id', '=', 'orders.id')
-            ->join('coupons', 'coupons.id', '=', 'order_items.coupon_id')
-            ->where('orders.status', OrderStatus::Paid->value)
-            ->where('orders.paid_at', '>=', $from->startOfDay())
-            ->when($storeId, fn ($q) => $q->where('coupons.store_id', $storeId));
     }
 }

@@ -37,7 +37,7 @@ function useSaveGroup<K extends keyof Settings>(group: K) {
   return { save, saving, errors };
 }
 
-function GeneralSettings({ initial, currency }: { initial: Settings['general']; currency: string }) {
+function GeneralSettings({ initial }: { initial: Settings['general'] }) {
   const [values, setValues] = useState(initial);
   const { save, saving, errors } = useSaveGroup('general');
 
@@ -51,31 +51,15 @@ function GeneralSettings({ initial, currency }: { initial: Settings['general']; 
           <FieldError message={errors.site_name} />
         </div>
         <div>
-          <Input label="Support Email" type="email" placeholder="support@yourdomain.com" value={values.support_email}
-            onChange={v => setValues(s => ({ ...s, support_email: v }))} helperText="Shown to shoppers on the Contact page and after checkout." />
+          <Input label="Support Email" type="email" placeholder="support@yourdomain.com" value={values.support_email ?? ''}
+            onChange={v => setValues(s => ({ ...s, support_email: v }))} helperText="Shown to shoppers on the Contact page." />
           <FieldError message={errors.support_email} />
-        </div>
-        <div>
-          <p className="text-sm font-medium text-slate-700">Store Currency</p>
-          <p className="text-sm text-slate-600 mt-1">{currency}</p>
-          <p className="text-xs text-slate-400 mt-1">Card payments are charged in this currency. It is set on the server (STORE_CURRENCY) because Stripe prices depend on it.</p>
         </div>
         <div>
           <Select label="Timezone" options={['America/New_York', 'America/Chicago', 'America/Los_Angeles', 'Europe/London', 'Asia/Karachi', 'Asia/Kolkata']}
             value={values.timezone} onChange={v => setValues(s => ({ ...s, timezone: v }))} />
           <p className="text-xs text-slate-400 mt-1">Coupons expire at midnight in this timezone.</p>
           <FieldError message={errors.timezone} />
-        </div>
-        <div className="flex items-start justify-between gap-4 pt-4 border-t border-slate-100">
-          <div>
-            <p className="text-sm font-medium text-slate-700">Sell Exclusive Codes</p>
-            <p className="text-xs text-slate-400 mt-0.5 max-w-lg">
-              Off: the website is a plain coupon site. Every coupon shows "Show coupon code" or "Get deal", opens the store and
-              shows the code pop-up; paid coupons, cart, sign-in and card checkout are hidden. On: paid coupons are sold by card.
-            </p>
-            <FieldError message={errors.shop_enabled} />
-          </div>
-          <Toggle checked={values.shop_enabled} onChange={v => setValues(s => ({ ...s, shop_enabled: v }))} ariaLabel="Sell exclusive codes" />
         </div>
       </div>
       <div className="mt-5 pt-4 border-t border-slate-100 flex justify-end gap-2">
@@ -117,8 +101,7 @@ function NotificationSettings({ initial }: { initial: Settings['notifications'] 
   const { save, saving } = useSaveGroup('notifications');
 
   const rows: { key: keyof Settings['notifications']; label: string; desc: string }[] = [
-    { key: 'email', label: 'Email Notifications', desc: 'Email admins about paid orders and refunds. Turning this off stops all admin emails.' },
-    { key: 'error_alerts', label: 'Problem Alerts', desc: 'Email admins about disputed payments and payments that could not be fulfilled.' },
+    { key: 'email', label: 'Email Notifications', desc: 'Email admins about important alerts. Turning this off stops all admin emails.' },
     { key: 'redemption_alerts', label: 'Coupon Usage Alerts', desc: 'Email admins and editors when a coupon reaches 80% of its usage limit and when it is used up.' },
     { key: 'sync_alerts', label: 'Brand Feed Alerts', desc: 'Email admins and editors when a brand feed import fails or skips bad rows.' },
   ];
@@ -262,7 +245,7 @@ export default function SettingsPage() {
   const { section } = useParams();
   const isAdmin = useCan('admin');
   const isSettingsGroup = section !== 'account';
-  const { data, loading, error, reload } = useApi<{ data: Settings; meta: { currency: string } }>(isSettingsGroup && isAdmin ? '/admin/settings' : null);
+  const { data, loading, error, reload } = useApi<{ data: Settings }>(isSettingsGroup && isAdmin ? '/admin/settings' : null);
 
   // Everyone has My Account; the site-wide groups are for admins.
   if (!SECTIONS.includes(section as Section) || (isSettingsGroup && !isAdmin)) return <Navigate to="/settings/account" replace />;
@@ -272,7 +255,7 @@ export default function SettingsPage() {
       <PageHeader title="Settings" />
       {section === 'account' && <AccountSettings />}
       {isSettingsGroup && !data && <FormLoadState loading={loading} error={error} onRetry={reload} />}
-      {data && section === 'general' && <GeneralSettings initial={data.data.general} currency={data.meta.currency} />}
+      {data && section === 'general' && <GeneralSettings initial={data.data.general} />}
       {data && section === 'seo' && <SeoSettings initial={data.data.seo} />}
       {data && section === 'notifications' && <NotificationSettings initial={data.data.notifications} />}
       {data && section === 'security' && <SecuritySettings initial={data.data.security} />}

@@ -12,7 +12,6 @@ import StoresPage from './pages/StoresPage';
 import CreateStorePage from './pages/CreateStorePage';
 import CouponsPage from './pages/CouponsPage';
 import CreateCouponPage from './pages/CreateCouponPage';
-import OrdersPage from './pages/OrdersPage';
 import RedemptionsPage from './pages/RedemptionsPage';
 import BrandFeedsPage from './pages/IntegrationsPage';
 import SyncHistoryPage from './pages/SyncHistoryPage';
@@ -86,7 +85,6 @@ function AdminRoutes() {
         <Route path="coupons/expired" element={<CouponsPage key={pathname} expiredOnly />} />
         <Route path="coupons/new" element={<Need permission="write"><CreateCouponPage /></Need>} />
         <Route path="coupons/:id/edit" element={<Need permission="write"><CreateCouponPage /></Need>} />
-        <Route path="orders" element={<OrdersPage />} />
         <Route path="redemptions" element={<RedemptionsPage />} />
 
         <Route path="blogs" element={<BlogsPage />} />

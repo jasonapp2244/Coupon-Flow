@@ -5,26 +5,17 @@ import { EmptyState, ErrorState, Pager, Spinner } from '../components/States';
 import { withQuery } from '../lib/api';
 import { useApi, useDebounced, usePageMeta } from '../lib/hooks';
 import { pageParam } from '../lib/format';
-import { useSite } from '../store/site';
 import type { Category, Coupon, Paginated } from '../lib/types';
-
-const KINDS = [
-  { value: '', label: 'All coupons' },
-  { value: 'free', label: 'Free codes' },
-  { value: 'paid', label: 'Exclusive codes' },
-];
 
 const ORDERS = [
   { value: '', label: 'Recently updated' },
   { value: 'newest', label: 'Newest' },
   { value: 'ending_soon', label: 'Ending soon' },
-  { value: 'price', label: 'Price: low to high' },
 ];
 
 export default function CouponsPage() {
   const [params, setParams] = useSearchParams();
   const q = params.get('q') ?? '';
-  const kind = params.get('kind') ?? '';
   const category = params.get('category') ?? '';
   const order = params.get('order') ?? '';
   const verified = params.get('verified') === '1';
@@ -51,24 +42,17 @@ export default function CouponsPage() {
     if (debounced.trim() !== (paramsRef.current.get('q') ?? '')) update({ q: debounced.trim() });
   }, [debounced]);
 
-  // Without the shop every coupon is free, so the free/exclusive filter and price sort have nothing to do.
-  const { shop_enabled: shop } = useSite();
-  const kindFilter = shop ? kind : '';
-
-  const heading = q ? `Coupons for “${q}”` : kindFilter === 'paid' ? 'Exclusive codes' : kindFilter === 'free' ? 'Free coupon codes' : 'All coupons';
-  usePageMeta(heading, shop
-    ? 'Browse working coupon codes and deals. Free codes are free to copy; exclusive codes can be bought by card.'
-    : 'Browse working coupon codes and deals. Click to reveal the code and shop at the store.');
+  const heading = q ? `Coupons for “${q}”` : 'All coupons';
+  usePageMeta(heading, 'Browse working coupon codes and deals. Click to reveal the code and shop at the store.');
 
   const categories = useApi<{ data: Category[] }>('/public/categories?type=store');
   const { data, loading, error, reload } = useApi<Paginated<Coupon>>(withQuery('/public/coupons', {
     q, category, page, per_page: 12, verified,
-    paid: kindFilter === '' ? undefined : kindFilter === 'paid' ? 1 : 0,
     ...(order ? { order } : { sort: 'updated_at', dir: 'desc' }),
   }));
 
   const coupons = data?.data ?? [];
-  const filtered = q || kindFilter || category || verified || order;
+  const filtered = q || category || verified || order;
 
   return (
     <div className="page py-10">
@@ -83,21 +67,10 @@ export default function CouponsPage() {
             {categories.data?.data.map(c => <option key={c.id} value={c.slug}>{c.name}</option>)}
           </select>
           <select value={order} onChange={e => update({ order: e.target.value })} aria-label="Sort by" className="field lg:ml-auto lg:w-52">
-            {ORDERS.filter(o => shop || o.value !== 'price').map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            {ORDERS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {shop && (
-            <fieldset className="flex flex-wrap gap-2">
-              <legend className="sr-only">Coupon type</legend>
-              {KINDS.map(k => (
-                <label key={k.value} className={`chip cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-deal ${kind === k.value ? 'chip-active' : ''}`}>
-                  <input type="radio" name="kind" value={k.value} checked={kind === k.value} onChange={() => update({ kind: k.value })} className="sr-only" />
-                  {k.label}
-                </label>
-              ))}
-            </fieldset>
-          )}
           <label className={`chip cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-deal ${verified ? 'chip-active' : ''}`}>
             <input type="checkbox" checked={verified} onChange={e => update({ verified: e.target.checked ? '1' : '' })} className="sr-only" />
             Verified only

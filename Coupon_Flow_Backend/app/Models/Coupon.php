@@ -10,8 +10,8 @@ use App\Services\SiteSettings;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use DateTimeInterface;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,8 +25,8 @@ class Coupon extends Model
     protected $fillable = [
         'store_id', 'title', 'type', 'code', 'description', 'tracking_url',
         'starts_at', 'expires_at', 'status',
-        'is_featured', 'is_verified', 'is_exclusive',
-        'price_cents', 'stock', 'unique_codes', 'usage_limit',
+        'is_featured', 'is_verified', 'is_exclusive', 'usage_limit',
+        'unique_codes', 'max_codes_per_visitor', 'commission_percent',
     ];
 
     /** Clicks are counted with an atomic query, not model saves, so they never reach the activity log. */
@@ -45,12 +45,34 @@ class Coupon extends Model
             'is_featured' => 'boolean',
             'is_verified' => 'boolean',
             'is_exclusive' => 'boolean',
-            'price_cents' => 'integer',
-            'stock' => 'integer',
-            'unique_codes' => 'boolean',
             'usage_limit' => 'integer',
             'uses_count' => 'integer',
+            'unique_codes' => 'boolean',
+            'max_codes_per_visitor' => 'integer',
+            'commission_percent' => 'float',
         ];
+    }
+
+    /**
+     * A code list keeps usage_limit = all its codes and uses_count = the codes handed out, so the
+     * usage-limit rules (hidden when used up, "X left", 80% alert, sort by % used) apply unchanged.
+     */
+    public function syncCodeCounts(): void
+    {
+        if (! $this->unique_codes) {
+            return;
+        }
+
+        $this->forceFill([
+            'usage_limit' => $this->codes()->count(),
+            'uses_count' => $this->codes()->whereNotNull('redemption_id')->count(),
+        ])->saveQuietly();
+    }
+
+    /** The rate used for a confirmed sale: this coupon's override, else its store's, else 0. */
+    public function commissionRate(): float
+    {
+        return $this->commission_percent ?? $this->store?->commission_percent ?? 0.0;
     }
 
     /** Deal start. A bare date means 00:00 that day in the store's timezone. */
@@ -145,30 +167,15 @@ class Coupon extends Model
         return $this->belongsTo(FeedSource::class);
     }
 
-    public function orderItems(): HasMany
+    public function codes(): HasMany
     {
-        return $this->hasMany(OrderItem::class);
+        return $this->hasMany(CouponCode::class);
     }
 
     /** Click-outs from the public site (and admin-logged redemptions). */
     public function redemptions(): HasMany
     {
         return $this->hasMany(Redemption::class);
-    }
-
-    public function codes(): HasMany
-    {
-        return $this->hasMany(CouponCode::class);
-    }
-
-    public function isPaid(): bool
-    {
-        return $this->price_cents > 0;
-    }
-
-    public function inStock(int $quantity = 1): bool
-    {
-        return $this->stock === null || $this->stock >= $quantity;
     }
 
     /**
@@ -185,14 +192,10 @@ class Coupon extends Model
             ->when(! $ignoreUsage, fn (Builder $q) => $q->where(fn (Builder $w) => $w->whereNull('usage_limit')->orWhereColumn('uses_count', '<', 'usage_limit')));
     }
 
-    /**
-     * Live and attached to an active, non-deleted store. Paid coupons only while the shop is
-     * switched on (Settings → General).
-     */
+    /** Live and attached to an active, non-deleted store. */
     public function scopePubliclyVisible(Builder $query, bool $ignoreUsage = false): void
     {
         $query->live($ignoreUsage)
-            ->when(! app(SiteSettings::class)->shopEnabled(), fn (Builder $q) => $q->where('price_cents', 0))
             ->whereHas('store', fn (Builder $q) => $q->where('status', StoreStatus::Active)->whereNull('deleted_at'));
     }
 

@@ -22,6 +22,7 @@ function StoreForm({ store }: { store: Store | null }) {
   const [categoryId, setCategoryId] = useState(store?.category_id ? String(store.category_id) : '');
   const [directUrl, setDirectUrl] = useState(store?.direct_url ?? '');
   const [trackingUrl, setTrackingUrl] = useState(store?.tracking_url ?? '');
+  const [commission, setCommission] = useState(store?.commission_percent != null ? String(store.commission_percent) : '');
   const [heading, setHeading] = useState(store?.heading ?? '');
   const [description, setDescription] = useState(store?.description ?? '');
   const [content, setContent] = useState(store?.content ?? '');
@@ -42,6 +43,8 @@ function StoreForm({ store }: { store: Store | null }) {
     const e: Record<string, string> = {};
     if (!name.trim()) e.name = 'Store name is required';
     if (!directUrl.trim()) e.direct_url = 'Direct URL is required';
+    const rate = commission.trim();
+    if (rate !== '' && (!/^\d{1,3}(\.\d{1,2})?$/.test(rate) || Number(rate) > 100)) e.commission_percent = 'Enter a percentage from 0 to 100, up to 2 decimals';
     return e;
   };
 
@@ -54,6 +57,8 @@ function StoreForm({ store }: { store: Store | null }) {
       name, slug: slug || undefined, category_id: categoryId || undefined,
       direct_url: directUrl, tracking_url: trackingUrl, heading, description, content,
       meta_title: metaTitle, meta_description: metaDescription, meta_keywords: metaKeywords,
+      // Empty string clears the rate (Laravel turns it into null).
+      commission_percent: commission.trim(),
       is_top: topStore, is_editor_choice: editorChoice,
       status: draft ? 'Draft' : deactivated ? 'Inactive' : 'Active',
       logo: logo ?? undefined,
@@ -123,6 +128,11 @@ function StoreForm({ store }: { store: Store | null }) {
             <Input label="Tracking URL" placeholder="https://track.example.com/amazon?ref=..." value={trackingUrl}
               onChange={v => { setTrackingUrl(v); clearError('tracking_url'); }} helperText="Include affiliate parameters for accurate conversion tracking." />
             <FieldError message={errors.tracking_url} />
+          </div>
+          <div>
+            <Input label="Commission %" type="number" placeholder="e.g. 8" value={commission}
+              onChange={v => { setCommission(v); clearError('commission_percent'); }} helperText="What the store pays you on a sale, e.g. 8" />
+            <FieldError message={errors.commission_percent} />
           </div>
         </div>
       </Card>

@@ -1,22 +1,22 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import { RotateCcw } from 'lucide-react';
-import { UsageBar } from '../components/CouponUsage';
+import { CodesLeftBar, UsageBar } from '../components/CouponUsage';
 import { Card, Input, Toggle, Button, PageHeader } from '../components/ui';
 import { FieldError, FormLoadState } from '../components/FormParts';
-import { CodeInput, CodePool, addCodes, describeAdd, parseCodes } from '../components/CodePool';
 import { api, ApiError } from '../lib/api';
 import { StorePicker } from '../components/StorePicker';
 import { useApi } from '../lib/hooks';
-import { fromCents, number, toCents } from '../lib/format';
-import { useApp } from '../store/AppContext';
-import type { Coupon, CouponType, Settings } from '../lib/types';
+import { useApp, useCan } from '../store/AppContext';
+import { addedMessage, CouponCodesCard, parseCodes } from '../components/CouponCodes';
+import type { Coupon, CouponCodesAdded, CouponType, Settings } from '../lib/types';
 
 const COUPON_TYPES: CouponType[] = ['Coupon Code', 'Deal', 'No Code Required'];
 
 function CouponForm({ coupon }: { coupon: Coupon | null }) {
   const navigate = useNavigate();
   const { showToast } = useApp();
+  const canWrite = useCan('write');
   const isEdit = coupon !== null;
 
   const [title, setTitle] = useState(coupon?.title ?? '');
@@ -34,36 +34,33 @@ function CouponForm({ coupon }: { coupon: Coupon | null }) {
   const [uses, setUses] = useState(coupon?.uses_count ?? 0);
   const [resetting, setResetting] = useState(false);
   const [trackingUrl, setTrackingUrl] = useState(coupon?.tracking_url ?? '');
-  const [isPaid, setIsPaid] = useState((coupon?.price_cents ?? 0) > 0);
   const settings = useApi<{ data: Settings }>('/admin/settings');
-  const shopOff = settings.data?.data.general.shop_enabled === false;
   const timezone = settings.data?.data.general.timezone;
-  const [price, setPrice] = useState(fromCents(coupon?.price_cents ?? 0));
-  const [limitStock, setLimitStock] = useState(coupon?.stock !== null && coupon?.stock !== undefined);
-  const [stock, setStock] = useState(coupon?.stock != null ? String(coupon.stock) : '');
-  const [uniqueCodes, setUniqueCodes] = useState(coupon?.unique_codes ?? false);
-  const [poolStock, setPoolStock] = useState(coupon?.stock ?? 0);
-  const [queuedCodes, setQueuedCodes] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
-  // Pooled: each buyer receives their own code from the pool, so there is no shared code or typed stock.
-  const pooled = isPaid && uniqueCodes;
-  // Otherwise paid coupons always need a code: it is what the buyer receives after paying.
-  const needsCode = !pooled && (type === 'Coupon Code' || isPaid);
-  // The pool can be managed live once the server knows the coupon uses one; until then codes are queued.
-  const poolIsLive = isEdit && coupon.unique_codes && pooled;
+  const [commission, setCommission] = useState(coupon?.commission_percent != null ? String(coupon.commission_percent) : '');
+  // Code list: shoppers each get the next unused code from a pasted list instead of one shared code.
+  const [uniqueCodes, setUniqueCodes] = useState(coupon?.unique_codes ?? false);
+  const [maxPerVisitor, setMaxPerVisitor] = useState(String(coupon?.max_codes_per_visitor ?? 5));
+  const [newCodes, setNewCodes] = useState('');
+  const [codeCounts, setCodeCounts] = useState(coupon ? { total: coupon.codes_total, left: coupon.codes_left } : null);
+
+  const isCodeList = type === 'Coupon Code' && uniqueCodes;
+  const needsCode = type === 'Coupon Code' && !uniqueCodes;
   const clearError = (field: string) => { if (errors[field]) setErrors(p => ({ ...p, [field]: '' })); };
 
   const validate = () => {
     const e: Record<string, string> = {};
     if (!title.trim()) e.title = 'Offer name is required';
     if (!storeId) e.store_id = 'Store is required';
-    if (needsCode && !code.trim()) e.code = isPaid ? 'A paid coupon needs a code: it is what the buyer receives' : 'Coupon code is required';
-    if (isPaid && toCents(price) < 50) e.price_cents = 'A paid coupon must cost at least 0.50';
-    if (!pooled && limitStock && (stock === '' || Number(stock) < 0 || !Number.isInteger(Number(stock)))) e.stock = 'Enter a whole number of 0 or more';
+    if (needsCode && !code.trim()) e.code = 'Coupon code is required';
     if (startsAt && expiresAt && expiresAt <= startsAt) e.expires_at = 'The deal must end after it starts';
-    if (usageLimit !== '' && (!Number.isInteger(Number(usageLimit)) || Number(usageLimit) < 1)) e.usage_limit = 'Enter a whole number of 1 or more, or leave it empty for unlimited';
+    if (!isCodeList && usageLimit !== '' && (!Number.isInteger(Number(usageLimit)) || Number(usageLimit) < 1)) e.usage_limit = 'Enter a whole number of 1 or more, or leave it empty for unlimited';
+    if (isCodeList && (maxPerVisitor.trim() === '' || !Number.isInteger(Number(maxPerVisitor)) || Number(maxPerVisitor) < 0 || Number(maxPerVisitor) > 1000)) e.max_codes_per_visitor = 'Enter a whole number from 0 to 1000 (0 = no limit)';
+    if (isCodeList && parseCodes(newCodes).length > 5000) e.codes = 'Add at most 5,000 codes at a time';
+    const rate = commission.trim();
+    if (rate !== '' && (!/^\d{1,3}(\.\d{1,2})?$/.test(rate) || Number(rate) > 100)) e.commission_percent = 'Enter a percentage from 0 to 100, up to 2 decimals';
     return e;
   };
 
@@ -81,33 +78,38 @@ function CouponForm({ coupon }: { coupon: Coupon | null }) {
       tracking_url: trackingUrl || null,
       starts_at: startsAt || null,
       expires_at: expiresAt || null,
-      usage_limit: usageLimit === '' ? null : Number(usageLimit),
+      // A code list's size is its limit; the API ignores usage_limit for it.
+      usage_limit: isCodeList || usageLimit === '' ? null : Number(usageLimit),
+      unique_codes: isCodeList,
+      max_codes_per_visitor: isCodeList ? Number(maxPerVisitor) : (coupon?.max_codes_per_visitor ?? 5),
+      commission_percent: commission.trim() === '' ? null : Number(commission),
       status: publish ? 'Active' : 'Draft',
       is_featured: featured,
       is_verified: verified,
       is_exclusive: exclusive,
-      price_cents: isPaid ? toCents(price) : 0,
-      stock: isPaid && limitStock && !pooled ? Number(stock) : null,
-      unique_codes: pooled,
     };
 
-    let savedId: number | null = null;
     try {
-      if (isEdit) await api.patch(`/admin/coupons/${coupon.id}`, payload);
-      else savedId = (await api.post<{ data: Coupon }>('/admin/coupons', payload)).data.id;
-      savedId ??= coupon?.id ?? null;
-      let message = isEdit ? 'Coupon updated successfully' : publish ? 'Coupon published successfully' : 'Coupon saved as draft';
-      const codes = pooled && !poolIsLive ? parseCodes(queuedCodes) : [];
-      if (codes.length && savedId !== null) message += `. ${describeAdd(await addCodes(savedId, codes))}`;
-      showToast('success', message);
+      if (isEdit) {
+        await api.patch(`/admin/coupons/${coupon.id}`, payload);
+      } else {
+        const created = await api.post<{ data: Coupon }>('/admin/coupons', payload);
+        const codes = isCodeList ? parseCodes(newCodes) : [];
+        if (codes.length) {
+          try {
+            const res = await api.post<CouponCodesAdded>(`/admin/coupons/${created.data.id}/codes`, { codes: codes.join('\n') });
+            showToast('success', addedMessage(res));
+          } catch (codesErr) {
+            // The coupon exists; open it so the codes can be added again from its Codes card.
+            showToast('error', `Coupon saved, but its codes weren't added: ${(codesErr as Error).message}`);
+            navigate(`/coupons/${created.data.id}/edit`);
+            return;
+          }
+        }
+      }
+      showToast('success', isEdit ? 'Coupon updated successfully' : publish ? 'Coupon published successfully' : 'Coupon saved as draft');
       navigate('/coupons');
     } catch (err) {
-      if (savedId !== null && !isEdit) {
-        // The coupon exists; only its codes failed. Continue on its edit page so nothing is created twice.
-        showToast('error', `Coupon saved, but the codes weren't added: ${(err as Error).message}`);
-        navigate(`/coupons/${savedId}/edit`);
-        return;
-      }
       if (err instanceof ApiError && err.status === 422) setErrors(err.fieldErrors());
       showToast('error', (err as Error).message);
       setSaving(false);
@@ -159,93 +161,49 @@ function CouponForm({ coupon }: { coupon: Coupon | null }) {
               ))}
             </div>
           </div>
+          {type === 'Coupon Code' && (
+            <div className="sm:col-span-2">
+              <p className="text-sm font-medium text-slate-700 block mb-2">Code delivery</p>
+              <div className="flex gap-3 flex-wrap">
+                {([[false, 'Same code for everyone'], [true, 'Code list (next code per click)']] as const).map(([value, label]) => (
+                  <button key={label} type="button" aria-pressed={uniqueCodes === value}
+                    onClick={() => { setUniqueCodes(value); clearError('code'); clearError('unique_codes'); }}
+                    className={`flex-1 min-w-48 py-2.5 rounded-lg border text-sm font-medium transition-colors ${uniqueCodes === value ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>{label}</button>
+                ))}
+              </div>
+              <p className="text-xs text-slate-400 mt-1.5">
+                {uniqueCodes
+                  ? 'Paste single-use codes. Every "Show coupon code" click gives the shopper the next unused one.'
+                  : 'Every shopper sees the same code.'}
+              </p>
+              <FieldError message={errors.unique_codes} />
+            </div>
+          )}
           {needsCode && (
             <div className="sm:col-span-2">
-              <Input label="Coupon Code" placeholder="e.g. SAVE20FALL" value={code} required helperText="Exact code users will enter at checkout"
+              <Input label="Coupon Code" placeholder="e.g. SAVE20FALL" value={code} required helperText="Exact code shoppers enter at the store's checkout"
                 onChange={v => { setCode(v); clearError('code'); }} />
               <FieldError message={errors.code} />
+            </div>
+          )}
+          {isCodeList && !isEdit && (
+            <div className="sm:col-span-2">
+              <label htmlFor="new-codes" className="text-sm font-medium text-slate-700">Paste codes, one per line</label>
+              <textarea id="new-codes" rows={6} value={newCodes} onChange={e => { setNewCodes(e.target.value); clearError('codes'); }}
+                placeholder={'SAVE-8K2Q\nSAVE-91ZD\nSAVE-4MXP'}
+                className="mt-1 w-full px-3 py-2 text-sm font-mono border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 text-slate-700 placeholder:text-slate-400 resize-y" />
+              <p className="text-xs text-slate-400">
+                {parseCodes(newCodes).length ? `${parseCodes(newCodes).length} codes will be added when you save. ` : ''}
+                You can also add codes (or upload a CSV / TXT file) after saving, from the coupon's edit page.
+              </p>
+              <FieldError message={errors.codes} />
             </div>
           )}
         </div>
       </Card>
 
-      <Card>
-        <h2 className="text-sm font-semibold text-slate-800 mb-1 pb-3 border-b border-slate-100">Pricing</h2>
-        <div className="flex items-center justify-between py-3">
-          <div>
-            <p className="text-sm font-medium text-slate-700">Paid coupon</p>
-            <p className="text-xs text-slate-400">Customers pay by card to reveal the code. Free coupons show their code publicly.</p>
-          </div>
-          <Toggle checked={isPaid} ariaLabel="Paid coupon" onChange={v => { setIsPaid(v); clearError('price_cents'); }} />
-        </div>
-        {isPaid && shopOff && (
-          <p className="mb-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            Selling exclusive codes is switched off, so this coupon is hidden on the website.
-            Turn it on in <Link to="/settings/general" className="font-semibold underline">Settings → General</Link>, or make the coupon free.
-          </p>
-        )}
-        {isPaid && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-            <div>
-              <Input label="Price (USD)" type="number" placeholder="2.99" value={price} required helperText="Minimum 0.50"
-                onChange={v => { setPrice(v); clearError('price_cents'); }} />
-              <FieldError message={errors.price_cents} />
-            </div>
-            <div className="sm:col-span-2 sm:row-start-2">
-              <p className="text-sm font-medium text-slate-700 mb-2">Code delivery</p>
-              <div className="flex gap-3 flex-wrap" role="radiogroup" aria-label="Code delivery">
-                {[
-                  { value: false, label: 'Same code for every buyer', hint: 'One code, sold as many times as stock allows' },
-                  { value: true, label: 'Unique code per buyer', hint: 'Each buyer gets their own code from a pool you upload' },
-                ].map(o => (
-                  <button key={String(o.value)} type="button" role="radio" aria-checked={uniqueCodes === o.value}
-                    onClick={() => { setUniqueCodes(o.value); clearError('unique_codes'); clearError('code'); }}
-                    className={`flex-1 min-w-48 px-3 py-2.5 rounded-lg border text-left transition-colors ${uniqueCodes === o.value ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'}`}>
-                    <span className={`block text-sm font-medium ${uniqueCodes === o.value ? 'text-blue-700' : 'text-slate-700'}`}>{o.label}</span>
-                    <span className="block text-xs text-slate-400 mt-0.5">{o.hint}</span>
-                  </button>
-                ))}
-              </div>
-              <FieldError message={errors.unique_codes} />
-            </div>
-            {pooled ? (
-              <div className="sm:row-start-1 sm:col-start-2">
-                <p className="text-sm font-medium text-slate-700 mb-1">Available to buy</p>
-                <p className="text-2xl font-semibold text-slate-800">{number(poolIsLive ? poolStock : parseCodes(queuedCodes).length)}</p>
-                <p className="text-xs text-slate-400">
-                  {poolIsLive
-                    ? `Unsold codes${coupon?.reserved_stock ? `, not counting ${coupon.reserved_stock} held by unpaid checkouts` : ''}. Sold out when this reaches 0.`
-                    : 'Codes you add below. Sold out when every code is sold.'}
-                </p>
-              </div>
-            ) : (
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-sm font-medium text-slate-700">Limit quantity</p>
-                <Toggle checked={limitStock} ariaLabel="Limit quantity" onChange={v => { setLimitStock(v); clearError('stock'); }} />
-              </div>
-              {limitStock
-                ? <Input type="number" placeholder="e.g. 50" value={stock} helperText={coupon?.reserved_stock ? `Units left to sell. ${coupon.reserved_stock} more are held by unpaid checkouts and come back if those aren't paid.` : 'Units left to sell; a unit is held while a shopper is paying'} onChange={v => { setStock(v); clearError('stock'); }} />
-                : <p className="text-xs text-slate-400 py-2">Unlimited — can be sold any number of times.</p>}
-              <FieldError message={errors.stock} />
-            </div>
-            )}
-          </div>
-        )}
-      </Card>
-
-      {pooled && (
-        <Card>
-          <h2 className="text-sm font-semibold text-slate-800 mb-1">Code pool</h2>
-          <p className="text-xs text-slate-400 mb-4 pb-3 border-b border-slate-100">
-            {poolIsLive
-              ? `${number(coupon?.codes_available ?? 0)} unsold, ${number(coupon?.codes_sold ?? 0)} sold when this page opened. A sold code stays with its buyer, even after a refund.`
-              : 'These codes are added when you save. Each is sold once, to one buyer.'}
-          </p>
-          {poolIsLive
-            ? <CodePool couponId={coupon.id} onStock={setPoolStock} />
-            : <CodeInput value={queuedCodes} onChange={setQueuedCodes} />}
-        </Card>
+      {isCodeList && isEdit && (
+        <CouponCodesCard couponId={coupon.id} canWrite={canWrite} onCountsChange={setCodeCounts} />
       )}
 
       <Card>
@@ -292,13 +250,28 @@ function CouponForm({ coupon }: { coupon: Coupon | null }) {
             </div>
             <FieldError message={errors.expires_at} />
           </div>
-          <div>
-            <Input label="Usage limit" type="number" placeholder="Unlimited" value={usageLimit}
-              onChange={v => { setUsageLimit(v); clearError('usage_limit'); }}
-              helperText="How many times shoppers can use it. Each 'Show coupon code' / 'Get deal' click uses one. Empty = unlimited." />
-            <FieldError message={errors.usage_limit} />
-          </div>
-          {isEdit && (
+          {isCodeList ? (
+            <div>
+              <Input label="Max codes per visitor per day" type="number" placeholder="5" value={maxPerVisitor}
+                onChange={v => { setMaxPerVisitor(v); clearError('max_codes_per_visitor'); }}
+                helperText="0 = no limit" />
+              <FieldError message={errors.max_codes_per_visitor} />
+            </div>
+          ) : (
+            <div>
+              <Input label="Usage limit" type="number" placeholder="Unlimited" value={usageLimit}
+                onChange={v => { setUsageLimit(v); clearError('usage_limit'); }}
+                helperText="How many times shoppers can use it. Each 'Show coupon code' / 'Get deal' click uses one. Empty = unlimited." />
+              <FieldError message={errors.usage_limit} />
+            </div>
+          )}
+          {isEdit && isCodeList && codeCounts && (
+            <div>
+              <p className="text-sm font-medium text-slate-700 mb-2">Codes left</p>
+              <CodesLeftBar left={codeCounts.left} total={codeCounts.total} />
+            </div>
+          )}
+          {isEdit && !isCodeList && (
             <div>
               <p className="text-sm font-medium text-slate-700 mb-2">Used so far</p>
               <UsageBar uses={uses} limit={usageLimit === '' ? null : Number(usageLimit) || null}
@@ -314,12 +287,17 @@ function CouponForm({ coupon }: { coupon: Coupon | null }) {
       </Card>
 
       <Card>
-        <h2 className="text-sm font-semibold text-slate-800 mb-4 pb-3 border-b border-slate-100">Tracking</h2>
+        <h2 className="text-sm font-semibold text-slate-800 mb-4 pb-3 border-b border-slate-100">Tracking & Commission</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
             <Input label="Tracking URL" placeholder="https://track.example.com/amazon?coupon=..." value={trackingUrl}
               onChange={v => { setTrackingUrl(v); clearError('tracking_url'); }} helperText="Leave blank to use the store's default tracking URL" />
             <FieldError message={errors.tracking_url} />
+          </div>
+          <div>
+            <Input label="Commission % (optional)" type="number" placeholder="Store's rate" value={commission}
+              onChange={v => { setCommission(v); clearError('commission_percent'); }} helperText="Overrides the store's rate for this coupon" />
+            <FieldError message={errors.commission_percent} />
           </div>
         </div>
       </Card>

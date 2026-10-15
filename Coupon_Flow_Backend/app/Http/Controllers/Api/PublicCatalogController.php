@@ -36,8 +36,6 @@ class PublicCatalogController extends Controller
         return response()->json(['data' => [
             'site_name' => $general['site_name'],
             'support_email' => $settings->supportEmail(),
-            'currency' => config('services.stripe.currency'),
-            'shop_enabled' => $settings->shopEnabled(),
             // Deal windows are shown in the store's time ("Ends Oct 25, 11:59 PM EDT").
             'timezone' => $settings->timezone(),
             ...$settings->group('seo'),
@@ -156,17 +154,13 @@ class PublicCatalogController extends Controller
             ->when($request->query('store'), fn ($q, $slug) => $q->whereHas('store', fn ($s) => $s->where('slug', $slug)))
             ->when($request->query('category'), fn ($q, $slug) => $q->whereHas('store.category', fn ($c) => $c->where('slug', $slug)))
             ->when($request->boolean('featured'), fn ($q) => $q->where('is_featured', true))
-            ->when($request->boolean('verified'), fn ($q) => $q->where('is_verified', true))
-            ->when($request->has('paid'), fn ($q) => $request->boolean('paid')
-                ? $q->where('price_cents', '>', 0)
-                : $q->where('price_cents', 0));
+            ->when($request->boolean('verified'), fn ($q) => $q->where('is_verified', true));
 
         match ($request->query('order')) {
             // Coupons without an end date go last.
             'ending_soon' => $query->orderByRaw('expires_at is null')->orderBy('expires_at')->orderBy('id'),
             'newest' => $query->latest('created_at')->latest('id'),
-            'price' => $query->orderBy('price_cents')->orderBy('id'),
-            default => $this->applySort($query, $request, ['updated_at', 'expires_at', 'price_cents', 'title']),
+            default => $this->applySort($query, $request, ['updated_at', 'expires_at', 'title']),
         };
 
         return PublicCouponResource::collection($query->paginate($this->perPage($request, 24)));
@@ -181,26 +175,45 @@ class PublicCatalogController extends Controller
      * Record a click-out and hand back where to send the shopper. Kept for pages still running
      * the previous website bundle; the current site links to /api/go/{id} instead.
      */
-    public function click(int $id, ClickOut $clickOut): JsonResponse
+    public function click(Request $request, int $id, ClickOut $clickOut): JsonResponse
     {
         $coupon = Coupon::publiclyVisible()->with('store')->findOrFail($id);
-        abort_unless($clickOut->record($coupon, auth('sanctum')->user()), 404, 'This offer is no longer available.');
+        $claim = $clickOut->claim($coupon, $clickOut->validToken($request->input('t')), $clickOut->visitorHash($request), auth('sanctum')->user());
+        abort_unless($claim['redemption'], 404, 'This offer is no longer available.');
 
-        return response()->json(['url' => $clickOut->couponUrl($coupon), 'code' => $coupon->isPaid() ? null : $coupon->code]);
+        return response()->json(['url' => $clickOut->couponUrl($coupon), 'code' => $coupon->unique_codes ? $claim['redemption']->coupon_code : $coupon->code]);
     }
 
     /**
-     * What the code pop-up shows once the shopper has clicked out. Free codes only: a paid
-     * coupon's code is delivered on its order. The click itself was recorded by /go.
+     * What the code pop-up shows once the shopper has clicked out. A shared code is just shown (the
+     * click was recorded by /go). A code-list coupon needs the click's token: the same token always
+     * gets the same code, whether /go or this request took it first.
      */
-    public function reveal(int $id): JsonResponse
+    public function reveal(Request $request, int $id, ClickOut $clickOut): JsonResponse
     {
         // Ignores the usage limit: the shopper whose click took the last use must still get the code.
         $coupon = Coupon::publiclyVisible(ignoreUsage: true)->with('store')->findOrFail($id);
+        $code = $coupon->code;
+        $limitReached = false;
+
+        if ($coupon->unique_codes) {
+            $code = null;
+            $token = $clickOut->validToken($request->query('t'));
+
+            if ($token) {
+                $visitor = $clickOut->visitorHash($request);
+                $claim = $clickOut->claim($coupon, $token, $visitor, auth('sanctum')->user());
+                $limitReached = $claim['limit_reached'];
+                $redemption = $claim['redemption'] ?? ($limitReached ? $clickOut->latestFor($coupon, $visitor) : null);
+                abort_unless($redemption || $limitReached, 404, 'This offer is no longer available.');
+                $code = $redemption?->coupon_code;
+            }
+        }
 
         return response()->json(['data' => [
-            ...(new PublicCouponResource($coupon))->resolve(),
-            'code' => $coupon->isPaid() ? null : $coupon->code,
+            ...(new PublicCouponResource($coupon->refresh()->load('store')))->resolve(),
+            'code' => $code,
+            'limit_reached' => $limitReached,
         ]]);
     }
 

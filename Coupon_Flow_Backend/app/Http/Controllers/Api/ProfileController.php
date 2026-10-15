@@ -24,22 +24,13 @@ class ProfileController extends Controller
         ]);
 
         $user->fill(collect($data)->except('current_password')->all());
-        $emailChanged = $user->isDirty('email');
 
         if ($user->isStaff() && $user->isDirty(['name', 'email', 'password'])) {
             $changed = array_keys(array_intersect_key($user->getDirty(), array_flip(['name', 'email', 'password'])));
             Audit::log('profile_updated', $user, array_fill_keys($changed, true), label: $user->getOriginal('email'));
         }
 
-        if ($emailChanged) {
-            $user->email_verified_at = null;
-        }
-
         $user->save();
-
-        if ($emailChanged) {
-            $user->sendEmailVerificationNotification();
-        }
 
         if (isset($data['password'])) {
             // Sign out every other device; this session stays signed in.
