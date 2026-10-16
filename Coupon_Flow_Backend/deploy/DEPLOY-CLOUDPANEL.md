@@ -1,5 +1,72 @@
 # Deploy on CloudPanel — one site, one domain
 
+## One-go deploy from GitHub (does steps 2–8 for you)
+
+The server pulls the repo, builds the API, admin and website itself, and installs or updates them.
+`deploy/cloudpanel/git-deploy.sh` does it, calling `deploy/cloudpanel/deploy.sh`.
+
+**Before you start, in CloudPanel:**
+1. Create the PHP site (step 1), with PHP 8.2 or newer.
+2. Issue its Let's Encrypt certificate.
+
+**1. Let the server read the private repo (once).** On the server, as root:
+
+```bash
+ssh-keygen -q -t ed25519 -N "" -C "coupon-follow-deploy" -f /root/.ssh/coupon_follow_deploy && cat /root/.ssh/coupon_follow_deploy.pub
+```
+
+Then add the printed line on GitHub: the repo → **Settings → Deploy keys → Add deploy key**. Leave write access off.
+
+**2. Deploy (first install and every update): one command on the server, as root.**
+
+```bash
+export GIT_SSH_COMMAND="ssh -i /root/.ssh/coupon_follow_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"; [ -d /root/coupon-follow-src ] || git clone -q git@github.com:jasonapp2244/Coupon-Flow.git /root/coupon-follow-src; bash /root/coupon-follow-src/Coupon_Flow_Backend/deploy/cloudpanel/git-deploy.sh couponhub.devonlinetestserver.com
+```
+
+**The first run asks for:**
+- the database (name, user, password; it can create them with `clpctl`);
+- optional SMTP settings;
+- the first admin's email and password.
+
+**It then:**
+- installs Composer and Node.js if they are missing;
+- builds everything;
+- backs up the site folder;
+- unpacks the API, `/admin` and the website;
+- writes `.env`;
+- imports the catalogue from `deploy/content/` (stores, coupons, blogs, settings, images);
+- migrates, links storage, builds the caches and adds the cron job;
+- patches the Nginx Vhost (step 6, checked with `nginx -t`, with the old one put back on failure);
+- checks the site;
+- builds the website again against the live API, so every page is pre-rendered.
+
+**Later runs update:**
+- maintenance mode on;
+- database and code backup;
+- new code, keeping `.env`, uploads and the database;
+- migrations and caches;
+- back online.
+
+**3. Optional: deploy on every `git push`.** `.github/workflows/deploy.yml` runs the same script over SSH when `main` changes. On the server, as root:
+
+```bash
+ssh-keygen -q -t ed25519 -N "" -C "github-actions" -f /root/.ssh/github_actions && cat /root/.ssh/github_actions.pub >> /root/.ssh/authorized_keys && cat /root/.ssh/github_actions
+```
+
+Then on GitHub: the repo → **Settings → Secrets and variables → Actions** → add two secrets:
+- `DEPLOY_HOST`: the server's IP;
+- `DEPLOY_SSH_KEY`: the whole private key the command printed, including the BEGIN and END lines.
+
+Delete `/root/.ssh/github_actions` from the server afterwards. Only its `.pub` half in `authorized_keys` is needed there.
+
+**Content:** the catalogue in `deploy/content/` comes from `bash deploy/export-content.sh` on the PC. It is only imported on the first install. After that, edit content in the live admin.
+
+**Without GitHub:** `DOMAIN=<domain> bash deploy/build-cloudpanel.sh` on the PC builds one bundle. Upload it, then on the server run `tar xzf coupon-follow-cloudpanel.tar.gz && bash deploy.sh <domain>`.
+
+**CloudPanel's Vhost editor:** the Vhost change is written to Nginx's file directly. If you later save the Vhost in CloudPanel's editor, paste in `vhost-applied.conf` from the backup folder (`/root/coupon-follow-backups/<time>/`), or the change is lost.
+
+The manual steps below describe the same work one by one.
+
 **Is it possible? Yes.** The API, the admin panel and the public website can all run as a single
 CloudPanel **PHP Site (Laravel)** on one domain. Nothing in the code has to change:
 

@@ -30,3 +30,24 @@ Deploy kit ready: `deploy/DEPLOY.md` (step by step), `deploy/build-release.sh` (
 
 ## 2026-10-16 — CloudPanel option
 One-site CloudPanel layout (API /api, admin /admin, website /) documented in `deploy/DEPLOY-CLOUDPANEL.md`. Not yet run on a server.
+
+## 2026-10-17 — CloudPanel one-go deploy kit
+Target: `couponhub.devonlinetestserver.com` (site user `devonlinetestserver-couponhub`; the site folder only had CloudPanel's `index.php`).
+
+**Kit:**
+- `deploy/build-cloudpanel.sh` builds one bundle on the PC.
+- `deploy/cloudpanel/deploy.sh` installs it on the server (later runs update), and `deploy/cloudpanel/patch-vhost.py` patches the Nginx Vhost.
+
+**Built:** `deploy/release/coupon-follow-cloudpanel.tar.gz` (9.4 MB, git-ignored).
+
+**Checked locally:**
+- `content.sql` imports cleanly into an empty database: 22 tables, 10 stores, 12 coupons, 0 uses, 0 clicks, admin only, 16 migrations.
+- The Vhost patcher works on CloudPanel's PHP template, and running it twice gives the same file.
+
+**Not yet run on the server.** The website must be rebuilt once the API is live, so its pages are pre-rendered.
+
+**Git-based deploy (2026-10-17, later):**
+- **Server:** `deploy/cloudpanel/git-deploy.sh <domain>` pulls the private repo with a read-only deploy key (`/root/.ssh/coupon_follow_deploy`). It installs Composer/Node if missing, builds, runs `deploy.sh`, and on the first install builds the website again against the live API.
+- **Content:** the catalogue is in the repo at `deploy/content/` (no user accounts; the first install asks for the admin). Refresh it with `deploy/export-content.sh`.
+- **Auto-deploy:** `.github/workflows/deploy.yml` redeploys on every push to `main`. It stays off until the `DEPLOY_HOST` and `DEPLOY_SSH_KEY` secrets are added.
+- **Status:** not yet run on the server.
