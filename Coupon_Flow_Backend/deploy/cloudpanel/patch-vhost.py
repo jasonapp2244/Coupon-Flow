@@ -27,6 +27,7 @@ STATIC = """
   location ^~ /storage/ { try_files $uri =404; expires 30d; }
 
   # Admin panel: static build in public/admin. Never indexed.
+  location = /admin { return 301 /admin/; }
   location ^~ /admin/ {
     try_files $uri $uri/ /admin/index.html;
     add_header X-Robots-Tag "noindex, nofollow" always;
@@ -91,8 +92,11 @@ def main():
         return 1
 
     if MARK in conf:
-        # Already patched: only make sure every root still points at public/.
+        # Already patched: make sure every root still points at public/, and add rules that
+        # later versions of this block introduced.
         conf = SERVER_ROOT.sub(lambda m: f"{m.group(1)}{site}/public;", conf)
+        if "location = /admin " not in conf:
+            conf = re.sub(r"(?m)^([ \t]*)(location \^~ /admin/ \{)", r"\1location = /admin { return 301 /admin/; }\n\1\2", conf, count=1)
         with open(path, "w") as f:
             f.write(conf)
         print("  Coupon Follow locations already present; roots set to public/.")
