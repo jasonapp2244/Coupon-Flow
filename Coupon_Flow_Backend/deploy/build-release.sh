@@ -24,6 +24,7 @@ rm -rf "$OUT" && mkdir -p "$STAGE"
 echo "API: copying sources"
 tar -C "$BACKEND" -cf - \
   --exclude=./vendor --exclude=./node_modules --exclude=./tests --exclude=./deploy \
+  --exclude=./progress --exclude=./CLAUDE.md --exclude=./phpunit.xml \
   --exclude=./.env --exclude=./.env.backup --exclude=./.phpunit.result.cache \
   --exclude=./public/storage --exclude='./storage/logs/*.log' --exclude='./storage/framework/sessions/*' \
   --exclude='./storage/framework/views/*' --exclude='./storage/framework/cache/data/*' \
