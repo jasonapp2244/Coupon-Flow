@@ -8,7 +8,7 @@ deploys every push to `main` with `git-deploy.sh` and shows its output in your t
 **1. On the server, as root (once):**
 
 ```bash
-git init -q --bare --initial-branch=main /root/couponhub.git && curl -fsSL -o /dev/null https://github.com || true
+git init -q --bare --initial-branch=main /root/couponhub.git
 ```
 
 Then create the hook: paste the contents of `deploy/cloudpanel/post-receive` into
