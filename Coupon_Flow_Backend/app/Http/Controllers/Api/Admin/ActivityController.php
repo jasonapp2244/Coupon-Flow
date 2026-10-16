@@ -23,7 +23,7 @@ class ActivityController extends Controller
     public function redemptions(Request $request): AnonymousResourceCollection
     {
         $query = Redemption::query()
-            ->with('store')
+            ->with(['store', 'coupon'])
             ->when($request->query('q'), fn ($q, $term) => $q->where(fn ($w) => $w
                 ->where('user_name', 'like', "%{$term}%")
                 ->orWhere('coupon_code', 'like', "%{$term}%")
@@ -89,7 +89,7 @@ class ActivityController extends Controller
             ->filter(fn (array $pair) => $pair[0] !== $pair[1])->all();
         Audit::log('sale_confirmed', $redemption, $changes, label: $redemption->reference);
 
-        return new RedemptionResource($redemption->load('store'));
+        return new RedemptionResource($redemption->load(['store', 'coupon']));
     }
 
     public function syncRuns(Request $request): AnonymousResourceCollection

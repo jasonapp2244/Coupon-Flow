@@ -16,6 +16,7 @@ const ACTIONS: Record<string, string> = {
   staff_created: 'Added staff member', staff_updated: 'Changed staff member', staff_invite_sent: 'Sent set-password link',
   settings_updated: 'Changed settings', ratings_reset: 'Reset store rating', rating_removed: 'Removed a rating',
   uses_reset: 'Reset coupon uses', feed_synced: 'Ran brand feed', csv_imported: 'Imported CSV',
+  codes_added: 'Added codes', code_removed: 'Removed a code', sale_confirmed: 'Confirmed sale',
 };
 
 const label = (action: string) => ACTIONS[action] ?? action.replace(/_/g, ' ');

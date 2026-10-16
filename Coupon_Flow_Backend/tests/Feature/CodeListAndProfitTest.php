@@ -204,6 +204,35 @@ class CodeListAndProfitTest extends TestCase
         $this->patchJson("/api/v1/admin/redemptions/{$first->id}", ['status' => 'Failed'])->assertForbidden();
     }
 
+    public function test_an_unconfirmed_click_shows_the_rate_its_sale_will_use(): void
+    {
+        $coupon = $this->codeList(['R-1', 'R-2']);
+        $this->reveal($coupon, self::TOKEN_A);
+        $this->actingAsAdmin();
+
+        // Not confirmed yet: no rate stored on the click, but the store's 8% will apply.
+        $this->getJson('/api/v1/admin/redemptions')->assertOk()
+            ->assertJsonPath('data.0.commission_percent', null)
+            ->assertJsonPath('data.0.commission_rate', 8);
+
+        // The coupon's own rate wins over the store's.
+        $coupon->update(['commission_percent' => 12.5]);
+        $this->getJson('/api/v1/admin/redemptions')->assertJsonPath('data.0.commission_rate', 12.5);
+
+        // Neither set: no rate, so the admin is told to set one.
+        $coupon->update(['commission_percent' => null]);
+        $coupon->store->update(['commission_percent' => null]);
+        $this->getJson('/api/v1/admin/redemptions')->assertJsonPath('data.0.commission_rate', null);
+
+        // Once confirmed, the rate stored on the sale is the one reported.
+        $coupon->store->update(['commission_percent' => 5]);
+        $id = Redemption::firstOrFail()->id;
+        $this->patchJson("/api/v1/admin/redemptions/{$id}", ['status' => 'Used', 'order_value' => 100])
+            ->assertJsonPath('data.commission_rate', 5)->assertJsonPath('data.commission_cents', 500);
+        $coupon->store->update(['commission_percent' => 9]);
+        $this->getJson('/api/v1/admin/redemptions')->assertJsonPath('data.0.commission_rate', 5);
+    }
+
     public function test_a_shared_code_still_works_as_before_with_a_token(): void
     {
         $coupon = Coupon::factory()->create(['code' => 'SAVE20', 'usage_limit' => 5]);

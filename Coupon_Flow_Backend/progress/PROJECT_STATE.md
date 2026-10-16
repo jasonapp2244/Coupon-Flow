@@ -1,6 +1,6 @@
 # Project State — Coupon Follow
 
-_Last updated: 2026-10-16_
+_Last updated: 2026-10-17_
 
 **Repository:** one git repo at `F:\React_project` (backend, admin and website as subfolders, root `README.md` +
 `.gitignore`), pushed to https://github.com/jasonapp2244/Coupon-Flow (branch `main`, first commit `976466f`,
@@ -16,6 +16,20 @@ rewrite pushed as 5229d39 on 2026-10-16). No `.env`, `vendor`, `node_modules` or
 | 3 | Public website (`../Coupon_Flow_Website`) | ✅ Done — see below |
 | 4 | Payments go-live (Stripe) | ❌ Removed 2026-10-15 at the user's request (see below); no payments at all |
 | 5 | Audit fixes, public site redesign, full test, SiteGround deploy | 🟡 Code, tests and release packaging done; live upload waits on user inputs (see TODO) |
+
+## Follow-up — pre-deploy browser test, admin + website (2026-10-17)
+The user asked for every feature to be tested step by step in Chrome before they deploy. Details are in TEST_STATUS.
+
+**How it ran:**
+- The Claude in Chrome extension got "connection refused" on 127.0.0.1, so the tests ran in real Chrome on this PC, driven by Playwright scripts kept in the session scratchpad.
+- MySQL had stopped and was restarted.
+
+**Fixed (uncommitted):**
+1. **`components/DataTable.tsx` `RowMenu`:** the open menu is now drawn over the page next to its button (portal, fixed position). It opens upward when there's no room below, follows the button on scroll and resize, and closes on Escape or a click elsewhere. Before, `overflow-x-auto` on the tables clipped menus below the last row.
+2. **`RedemptionResource`:** new `commission_rate` field, the rate confirming a sale applies: the stored rate, else the coupon's, else the store's. The redemptions list and Confirm sale eager-load `coupon`. The admin's Confirm sale pop-up and the drawer use it, so the profit preview shows before confirming.
+3. **`ActivityLogPage`:** labels for `codes_added`, `code_removed` and `sale_confirmed`.
+
+**Result:** 127 backend tests; no other defects found. All E2E data was removed afterwards.
 
 ## Follow-up — end-to-end test of every feature, admin + website (2026-10-16)
 Client: test every feature of the admin panel and the website.

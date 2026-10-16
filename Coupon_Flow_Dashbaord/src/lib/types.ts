@@ -233,6 +233,8 @@ export interface Redemption {
   coupon_id: number | null;
   /** The rate the profit was worked out with (coupon override, else the store's); null = none set. */
   commission_percent: number | null;
+  /** The rate confirming this sale applies: the stored one once confirmed, else the coupon's, else the store's. */
+  commission_rate?: number | null;
 }
 
 export interface RedemptionSummary {

@@ -1,6 +1,9 @@
 # TODO
 
 ## Blocked on user
+- [ ] Commit the 2026-10-17 pre-deploy fixes (row menus, commission preview, activity labels, 1 new test) before building the release zips.
+- [ ] Decide whether to delete the 57 old "E2E Test…" admin notifications left by the 2026-10-16 test run. They weren't removed, because they weren't from this run.
+- [ ] Minor: All Coupons should re-read `?state=` / `?near=` when only the query changes on the same page.
 - [x] Commit the end-to-end test fixes + responsive changes (committed and pushed to main 2026-10-16).
 - [ ] Optional: a "Delete" for test/junk click rows in Redemptions (E2E clean-up had to delete 28 rows in the DB).
 - [x] Leftover local test accounts removed 2026-10-16 (users #2 and #5, their 95 log rows and 3 tokens); backup in `storage/app/backups/2026-10-16_test_accounts.json`. Only the admin account remains.

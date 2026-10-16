@@ -1,8 +1,72 @@
 # Test Status
 
-_Last run: 2026-10-16_
+_Last run: 2026-10-17_
 
 ## Backend
+Visible human-style walk-through (2026-10-17), one tab, real Chrome window on this PC (Playwright, headed, slowed, typing like a person):
+- **Why not the extension:** the Claude in Chrome extension's browser is not on this PC. It gets "refused" on 127.0.0.1, even for Apache, and times out on the LAN address 192.168.100.85.
+- **Ports:** port 8000 is taken by XAMPP Apache, so the API ran on 8001 (`APP_URL=http://127.0.0.1:8001 php artisan serve --port=8001`, and both Vite servers with `VITE_API_URL=http://127.0.0.1:8001/api/v1`).
+- **Result:** all 21 steps pass. The one scripted "fail" (Analytics uses card read during the filter reload) shows the correct 6 uses in its screenshot.
+- **Steps:**
+  - admin sign-in errors and sign-in, dashboard;
+  - category; store with logo and 10%, then edit;
+  - 4 coupons; list search; last-row menu fully visible and Escape closes it;
+  - blog publish; staff add → Viewer → switch off; settings pages, General save;
+  - website: home, search → store page, scheduled coupon hidden;
+  - Show coupon code → example.com tab → pop-up → Copy → refresh → Escape;
+  - 3 uses → hidden; deal "No code required"; code list A1 → A2 → daily limit;
+  - rating; blog post; About; 404; 375 px with no sideways scroll;
+  - Confirm sale $150 shows "Commission 10% · profit $15.00" and saves; Failed;
+  - Analytics for the store: 6 uses, $15.00; Dashboard; Activity log "Confirmed sale";
+  - Trash delete → restore → delete permanently.
+- **Data afterwards:** DB backup `storage/app/backups/2026-10-17_pre_chrome_test.sql`; all E2E records and the logo file removed afterwards (10 stores, 12 coupons, 1 user, as before).
+
+Pre-deploy full test (2026-10-17), real Chrome on this PC driven by Playwright, because the Claude in Chrome extension could not reach 127.0.0.1:
+- **Baseline before browser testing:** `php artisan test` 126 passed; pint passed; admin `vite build` OK; website `tsc` clean.
+- **Admin, 25 checks:**
+  - login validation (empty, bad email, wrong password), forgot-password form, correct login, logout;
+  - 18 pages load with no console errors.
+- **Admin create/edit:**
+  - store category and blog category: create, edit, Escape closes the dialog, empty name refused;
+  - store: validation messages, then create with logo, category and 10% commission (slug auto-generated), list search, edit;
+  - coupons: validation messages, plus four coupons (shared code with limit 3, deal, code list with 5 codes and 2 per visitor a day, scheduled), end-before-start refused;
+  - code list CSV upload skips the BOM and the header row; delete one code;
+  - blog published with ## headings, a list and a link;
+  - staff: add an editor (`tauseefchoohan0401+e2e@gmail.com`), change role to Viewer, switch off;
+  - settings: General, SEO, Homepage, Notifications and Security saved unchanged; wrong current password refused; 2FA setup opened and cancelled (still off);
+  - brand feed: template download, CSV-upload source added, 1 coupon imported, run listed in Sync History;
+  - Trash: blog deleted, restored (comes back as Draft), deleted again, deleted permanently;
+  - activity log lists every action.
+- **Website, 30 checks:**
+  - 14 pages: HTTP 200, title, description and canonical present, no console errors;
+  - scheduled coupon hidden and its /api/go link returns to the store page; 404 page; retired /cart and /checkout redirect home;
+  - header search opens the store;
+  - "Show coupon code": the store opens in a new tab, the pop-up shows the code, Copy puts it on the clipboard, the pop-up survives a refresh, Escape closes it;
+  - usage limit 3: "Used 1 time, 2 left", the coupon hides after the 3rd use, a 4th /go goes back to the store page and is not counted;
+  - deal shows "No code required";
+  - code list: A1, then "Get another code" gives A2, a refresh keeps A2, the 3rd claim hits the daily limit, a second visitor gets A3;
+  - store rating: one vote kept when the vote is changed;
+  - blog post renders headings, lists and links;
+  - no sideways scroll at 375, 768 and 1280 px.
+- **Admin ↔ website:**
+  - Dashboard "Uses Today" matches the click rows for the UTC day;
+  - Redemptions store filter shows the 7 E2E clicks;
+  - Confirm sale: $150 at 10% gives $15.00; Used without an amount refused; Failed and Pending work;
+  - summary cards and Analytics for the store show the profit, CSV export has today's row;
+  - Reset uses works, and a coupon title edit shows on the site;
+  - admin at 375 px: no overflow, sidebar opens.
+- **Bugs found and fixed:**
+  1. Row action menus were cut off below a table's last row. Staff (every row), and the bottom rows of Stores, Coupons, Blogs and Feeds, could not reach Delete or Switch off.
+  2. The Confirm sale pop-up said "Commission Not set" and showed no profit preview for unconfirmed clicks.
+  3. Three activity actions showed raw names.
+
+  All three were re-tested in Chrome. New test `test_an_unconfirmed_click_shows_the_rate_its_sale_will_use`.
+- **After the fixes:** `php artisan test` **127 passed (855 assertions)**; pint passed; admin `tsc` clean and `vite build` OK; admin page suite 25/25.
+- **Data afterwards:**
+  - DB backup taken before testing: `storage/app/backups/2026-10-17_pre_e2e.sql`.
+  - All E2E records from this run were deleted: store, logo file, 5 coupons and their codes, 7 clicks, rating, 2 categories, feed and its sync run, staff user and reset token, 8 notifications.
+  - Activity log rows were kept (audit trail).
+- **Not fixed (minor):** All Coupons reads `?state=` / `?near=` only when the page first opens. Changing only the query while already on All Coupons keeps the old filter. A fresh load and the Dashboard links work.
 Responsive check (2026-10-16), headless Chrome with touch and device scale on phones and tablets, 15 pages × 15 sizes from 320 px to 2560 px:
 - **After the fixes:** no sideways overflow, no clipped text, no text under 12 px, no distorted images, no touch target under 24 px.
 - **Pop-up and mobile menu** checked at 320×568, 667×375, 844×390 and 768×1024: the close button stays reachable, and the pop-up scrolls only on short screens.

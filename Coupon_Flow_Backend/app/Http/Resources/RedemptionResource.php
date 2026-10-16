@@ -23,6 +23,9 @@ class RedemptionResource extends JsonResource
             'commission_cents' => $this->commission_cents,
             // The rate used when the sale was confirmed.
             'commission_percent' => $this->commission_percent,
+            // The rate a confirmation applies: the stored one once confirmed, else the coupon's,
+            // else the store's (as confirmSale picks it); null when neither has one.
+            'commission_rate' => $this->commission_percent ?? $this->whenLoaded('coupon', fn () => $this->coupon?->commission_percent ?? $this->store?->commission_percent),
             'clicked_at' => $this->clicked_at?->toIso8601String(),
             'redeemed_at' => $this->redeemed_at?->toIso8601String(),
             'status' => $this->status->value,

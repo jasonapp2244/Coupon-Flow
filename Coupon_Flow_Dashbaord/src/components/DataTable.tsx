@@ -1,4 +1,5 @@
-import { type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Search, AlertTriangle, MoreHorizontal } from 'lucide-react';
 import { Button, EmptyState } from './ui';
 import type { PageMeta } from '../lib/types';
@@ -111,15 +112,58 @@ export function Pagination({ meta, onPage, onPageSize }: {
 export function RowMenu({ open, onToggle, children, width = 'w-36' }: {
   open: boolean; onToggle: () => void; children: ReactNode; width?: string;
 }) {
+  const button = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+
+  // Tables scroll sideways, and that clips anything hanging below their last row, so the open
+  // menu is drawn over the page next to its button, opening upward when there is no room below.
+  // It follows the button when the page scrolls or resizes.
+  useLayoutEffect(() => {
+    if (!open) { setPos(null); return; }
+    const place = () => {
+      if (!button.current || !panel.current) return;
+      const r = button.current.getBoundingClientRect();
+      const h = panel.current.offsetHeight;
+      const up = r.bottom + 4 + h > window.innerHeight && r.top - 4 - h >= 0;
+      setPos({ top: up ? r.top - 4 - h : r.bottom + 4, right: window.innerWidth - r.right });
+    };
+    place();
+    window.addEventListener('scroll', place, true);
+    window.addEventListener('resize', place);
+    return () => {
+      window.removeEventListener('scroll', place, true);
+      window.removeEventListener('resize', place);
+    };
+  }, [open]);
+
+  // Escape or a click anywhere else closes it.
+  useEffect(() => {
+    if (!open) return;
+    const outside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (!button.current?.contains(target) && !panel.current?.contains(target)) onToggle();
+    };
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') onToggle(); };
+    document.addEventListener('mousedown', outside);
+    document.addEventListener('keydown', key);
+    return () => {
+      document.removeEventListener('mousedown', outside);
+      document.removeEventListener('keydown', key);
+    };
+  }, [open, onToggle]);
+
   return (
     <div className="relative">
-      <button onClick={onToggle} aria-label="Row actions" className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-slate-100 text-slate-400">
+      <button ref={button} onClick={onToggle} aria-label="Row actions" aria-expanded={open} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-slate-100 text-slate-400">
         <MoreHorizontal size={14} />
       </button>
-      {open && (
-        <div className={`absolute right-0 top-8 ${width} bg-white rounded-lg border border-slate-200 shadow-lg z-20 py-1`}>
+      {open && createPortal(
+        <div ref={panel} style={pos ? { position: 'fixed', top: pos.top, right: pos.right } : { position: 'fixed', top: 0, right: 0, visibility: 'hidden' }}
+          className={`${width} bg-white rounded-lg border border-slate-200 shadow-lg z-50 py-1 text-left`}>
           {children}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

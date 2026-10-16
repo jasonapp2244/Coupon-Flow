@@ -33,7 +33,8 @@ function ConfirmSaleModal({ r, onClose, onSaved }: { r: Redemption; onClose: () 
   const value = Number(amount);
   const amountOk = amount.trim() !== '' && Number.isFinite(value) && value > 0;
   // Preview only: the API works out the stored profit (order × rate) itself.
-  const profitCents = amountOk && r.commission_percent != null ? Math.round(value * r.commission_percent) : null;
+  const rate = r.commission_rate ?? r.commission_percent;
+  const profitCents = amountOk && rate != null ? Math.round(value * rate) : null;
 
   const save = async () => {
     if (status === 'Used' && !amountOk) { setError('Enter the order amount, more than $0'); return; }
@@ -84,10 +85,10 @@ function ConfirmSaleModal({ r, onClose, onSaved }: { r: Redemption; onClose: () 
             <Input label="Order amount ($)" type="number" placeholder="e.g. 84.50" value={amount} required
               onChange={v => { setAmount(v); setError(''); }} helperText="The order total the store reported for this sale, in US dollars." />
             <div className="mt-2 rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2 text-xs text-emerald-800">
-              Commission {rateLabel(r.commission_percent)}
+              Commission {rateLabel(rate)}
               {profitCents != null
                 ? <> · profit <span className="font-semibold">{money(profitCents)}</span></>
-                : r.commission_percent == null ? ' · set a commission % on the store or coupon to earn profit' : ''}
+                : rate == null ? ' · set a commission % on the store or coupon to earn profit' : ''}
             </div>
           </div>
         )}
@@ -110,7 +111,7 @@ function RedemptionDrawer({ r, onClose, onConfirm }: { r: Redemption; onClose: (
           ['Clicked At', dateTime(r.clicked_at)],
           ['Redeemed At', dateTime(r.redeemed_at)],
           ['Order Value', <span className="font-semibold text-slate-800">{money(r.order_value_cents)}</span>],
-          ['Commission %', rateLabel(r.commission_percent)],
+          ['Commission %', rateLabel(r.commission_rate ?? r.commission_percent)],
           ['Profit', <span className="text-emerald-600 font-medium">{money(r.commission_cents)}</span>],
           ['Status', statusBadge(r.status)],
         ] as [string, React.ReactNode][]).map(([label, value]) => (
