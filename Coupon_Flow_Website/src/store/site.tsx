@@ -8,7 +8,7 @@ const FALLBACK: SiteSettings = {
   site_name: 'Coupon Follow',
   support_email: '',
   meta_title: '',
-  meta_description: 'Free promo codes and deals for Amazon, Walmart, Nike, Sephora and more. Reveal a code, shop in a new tab and save at checkout. No sign-up needed.',
+  meta_description: 'Free promo codes and deals from popular stores. Reveal a code, shop in a new tab and save at checkout. No sign-up needed.',
   meta_keywords: '',
   timezone: 'America/New_York',
   homepage: {

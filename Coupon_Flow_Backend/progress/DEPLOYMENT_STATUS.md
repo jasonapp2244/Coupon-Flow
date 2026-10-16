@@ -32,6 +32,10 @@ Deploy kit ready: `deploy/DEPLOY.md` (step by step), `deploy/build-release.sh` (
 One-site CloudPanel layout (API /api, admin /admin, website /) documented in `deploy/DEPLOY-CLOUDPANEL.md`. Not yet run on a server.
 
 ## 2026-10-17 — CloudPanel one-go deploy kit
+
+**Update 2026-10-17 (hand-over):** live is installed at couponhub.devonlinetestserver.com (with the old demo
+catalogue). Clean-up is `git-deploy.sh … main --reset-content` (see DEPLOY-CLOUDPANEL.md, "Hand-over reset");
+new installs are empty; `deploy/content/` is no longer in the repo. Certificate still self-signed.
 Target: `couponhub.devonlinetestserver.com` (site user `devonlinetestserver-couponhub`; the site folder only had CloudPanel's `index.php`).
 
 **Kit:**

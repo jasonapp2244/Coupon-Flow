@@ -79,7 +79,9 @@ export default function StoresPage() {
         <section className="mt-8" aria-label="Stores">
           {error && <ErrorState message={error} onRetry={reload} />}
           {loading && !data && <CardSkeletons count={9} />}
-          {data && stores.length === 0 && <EmptyState title="No stores found">Check the spelling, or try a different letter or category.</EmptyState>}
+          {data && stores.length === 0 && ([...params.keys()].some(k => k !== 'page')
+            ? <EmptyState title="No stores found">Check the spelling, or try a different letter or category.</EmptyState>
+            : <EmptyState title="No stores yet">Stores are being added. Check back soon.</EmptyState>)}
           <ul className={`grid gap-3 sm:grid-cols-2 lg:grid-cols-3 ${loading ? 'opacity-60' : ''}`}>
             {stores.map(s => <li key={s.id}><StoreCard store={s} /></li>)}
           </ul>

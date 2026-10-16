@@ -85,7 +85,8 @@ export default function CouponsPage() {
         <section className="mt-8" aria-label="Coupons">
           {error && <ErrorState message={error} onRetry={reload} />}
           {loading && !data && <TicketSkeletons count={4} />}
-          {data && coupons.length === 0 && (
+          {data && coupons.length === 0 && ![...params.keys()].some(k => k !== 'page') && <EmptyState title="No coupons yet">New codes and deals are added often. Check back soon.</EmptyState>}
+          {data && coupons.length === 0 && [...params.keys()].some(k => k !== 'page') && (
             <EmptyState title="No coupons match that search">
               Try a store name instead, or <button className="font-semibold text-deal underline" onClick={() => { setText(''); setParams(new URLSearchParams(), { replace: true }); }}>clear the filters</button>.
             </EmptyState>

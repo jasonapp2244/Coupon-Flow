@@ -17,6 +17,19 @@ rewrite pushed as 5229d39 on 2026-10-16). No `.env`, `vendor`, `node_modules` or
 | 4 | Payments go-live (Stripe) | ❌ Removed 2026-10-15 at the user's request (see below); no payments at all |
 | 5 | Audit fixes, public site redesign, full test, SiteGround deploy | 🟡 Code, tests and release packaging done; live upload waits on user inputs (see TODO) |
 
+## Follow-up — hand-over clean: no demo data, admin only (2026-10-17)
+Client's final requirement: the live site starts empty, with only the admin account.
+- `php artisan content:reset --keep-admin=<email> --force` (`app/Console/Commands/ResetContent.php`): removes every
+  store, coupon, code, blog, category, feed, click, rating, sync run, activity entry, notification, setting row,
+  token, session and uploaded image, and every account except that admin. Settings fall back to code defaults.
+- `deploy.sh --reset-content` / `git-deploy.sh <domain> main --reset-content`: asks the admin to keep + optional
+  new password + "RESET", backs up the DB first, then runs the reset and rebuilds the website.
+- First installs are always empty now (`--fresh`); the demo catalogue `deploy/content/` was removed from the repo.
+- Admin sign-in panel: fake figures (284.1K clicks, NIKE15RUN…) replaced by three plain feature cards.
+- Website: brand-free fallback meta description; home hides empty Featured coupons / Top stores; Coupons, Stores and
+  Blog say "… yet, check back soon" when empty and unfiltered.
+- Local `DemoSeeder` kept for development only (never runs in production).
+
 ## Follow-up — pre-deploy browser test, admin + website (2026-10-17)
 The user asked for every feature to be tested step by step in Chrome before they deploy. Details are in TEST_STATUS.
 

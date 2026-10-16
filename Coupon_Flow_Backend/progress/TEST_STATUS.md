@@ -2,6 +2,13 @@
 
 _Last run: 2026-10-17_
 
+## Hand-over clean (2026-10-17)
+- `php artisan test`: 130 passed (874 assertions), incl. new `ContentResetTest` (3 tests).
+- Website `tsc --noEmit` + full build (sitemap/prerender) OK; admin `tsc -b` + build OK; `bash -n` on deploy scripts OK.
+- Empty-API browser check (`scratchpad/e2e/30-empty-site.cjs`, empty SQLite API on :8002): 8/8 PASS, 0 console errors
+  (home hides empty sections, "No coupons/stores/articles yet", filtered "no match" texts, brand-free description,
+  admin sign-in without fake figures).
+
 ## Backend
 Visible human-style walk-through (2026-10-17), one tab, real Chrome window on this PC (Playwright, headed, slowed, typing like a person):
 - **Why not the extension:** the Claude in Chrome extension's browser is not on this PC. It gets "refused" on 127.0.0.1, even for Apache, and times out on the LAN address 192.168.100.85.

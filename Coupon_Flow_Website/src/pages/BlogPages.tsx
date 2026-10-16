@@ -166,7 +166,8 @@ export function BlogListPage() {
         <section aria-label="Articles">
           {error && <ErrorState message={error} onRetry={reload} />}
           {loading && !data && <CardSkeletons />}
-          {data && posts.length === 0 && (
+          {data && posts.length === 0 && ![...params.keys()].some(k => k !== 'page') && <EmptyState title="No articles yet">Shopping guides and savings tips are on their way. Check back soon.</EmptyState>}
+          {data && posts.length === 0 && [...params.keys()].some(k => k !== 'page') && (
             <EmptyState title="No articles found">
               Try a different word, or <button className="font-semibold text-deal-dark underline" onClick={() => { setText(''); setParams(new URLSearchParams(), { replace: true }); }}>see every article</button>.
             </EmptyState>

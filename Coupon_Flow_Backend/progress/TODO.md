@@ -1,6 +1,8 @@
 # TODO
 
 ## Blocked on user
+- [ ] Live hand-over reset: run on the server `cd /root/coupon-follow-src && git fetch -q origin main && git reset -q --hard origin/main && bash Coupon_Flow_Backend/deploy/cloudpanel/git-deploy.sh couponhub.devonlinetestserver.com main --reset-content`, then verify live (0 stores, admin sign-in).
+- [ ] Let's Encrypt certificate for couponhub.devonlinetestserver.com is still self-signed.
 - [ ] Commit the 2026-10-17 pre-deploy fixes (row menus, commission preview, activity labels, 1 new test) before building the release zips.
 - [ ] Decide whether to delete the 57 old "E2E Test…" admin notifications left by the 2026-10-16 test run. They weren't removed, because they weren't from this run.
 - [ ] Minor: All Coupons should re-read `?state=` / `?near=` when only the query changes on the same page.

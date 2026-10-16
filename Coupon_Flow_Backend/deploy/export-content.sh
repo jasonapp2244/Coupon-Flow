@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Exports the catalogue from the local database into deploy/content/ so a server can import it on
-# its first install (git-deploy.sh / deploy.sh):
+# Exports the catalogue from the local database into deploy/content/, for a server install that
+# should start WITH this content (deploy.sh imports content.sql when not run with --fresh).
+# git-deploy.sh always installs empty (--fresh); nothing from here is in the repo by default.
 #   deploy/content/catalog.sql   stores, coupons, codes, categories, blogs, feeds, settings
 #   deploy/content/storage/      uploaded images (store logos, hero, blog)
 #

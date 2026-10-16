@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
-import { Eye, EyeOff, ArrowRight, ShieldCheck, TrendingUp, Tag, Store, ShoppingCart, Zap } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, ShieldCheck, TrendingUp, Tag, Store, ShoppingCart } from 'lucide-react';
 import { api, ApiError, clearToken, setToken } from '../lib/api';
 import { isStaff } from '../lib/permissions';
 import type { User } from '../lib/types';
@@ -13,31 +13,16 @@ interface LoginPageProps {
 
 // ─── Floating visual card components ────────────────────────────────────────
 
-function StatCard({ label, value, color }: { label: string; value: string; color: string }) {
-  return (
-    <div className="bg-white/12 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 flex items-center gap-3">
-      <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center`}>
-        <TrendingUp size={14} className="text-white" />
-      </div>
-      <div>
-        <p className="text-white font-bold text-base leading-none">{value}</p>
-        <p className="text-white/60 text-xs mt-0.5">{label}</p>
-      </div>
-    </div>
-  );
-}
-
-function CouponCard({ code, store, discount }: { code: string; store: string; discount: string }) {
+function FeatureCard({ icon: Icon, title, text, color }: { icon: typeof Tag; title: string; text: string; color: string }) {
   return (
     <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 flex items-center gap-3">
-      <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-        <Tag size={13} className="text-white" />
+      <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center flex-shrink-0`}>
+        <Icon size={14} className="text-white" />
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-white text-xs font-semibold font-mono">{code}</p>
-        <p className="text-white/60 text-[11px]">{store}</p>
+      <div className="min-w-0">
+        <p className="text-white text-sm font-semibold leading-tight">{title}</p>
+        <p className="text-white/60 text-xs mt-0.5">{text}</p>
       </div>
-      <span className="text-emerald-300 text-xs font-bold">{discount}</span>
     </div>
   );
 }
@@ -485,28 +470,11 @@ function BrandPanel() {
         </p>
       </div>
 
-      {/* Floating cards */}
+      {/* What the dashboard does */}
       <div className="relative space-y-3">
-        <div className="grid grid-cols-2 gap-3">
-          <StatCard label="Total Clicks" value="284.1K" color="bg-blue-600" />
-          <StatCard label="Redemptions" value="18,429" color="bg-emerald-600" />
-        </div>
-        <CouponCard code="SAVE20FALL" store="Amazon" discount="20% OFF" />
-        <CouponCard code="NIKE15RUN" store="Nike" discount="15% OFF" />
-        <div className="flex gap-3">
-          <div className="flex-1 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 flex items-center gap-2.5">
-            <div className="w-7 h-7 bg-amber-500/80 rounded-lg flex items-center justify-center"><Store size={12} className="text-white" /></div>
-            <div><p className="text-white font-semibold text-sm">8,732</p><p className="text-white/50 text-[11px]">Stores</p></div>
-          </div>
-          <div className="flex-1 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 flex items-center gap-2.5">
-            <div className="w-7 h-7 bg-violet-500/80 rounded-lg flex items-center justify-center"><ShoppingCart size={12} className="text-white" /></div>
-            <div><p className="text-white font-semibold text-sm">52.4K</p><p className="text-white/50 text-[11px]">Coupons</p></div>
-          </div>
-          <div className="flex-1 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 flex items-center gap-2.5">
-            <div className="w-7 h-7 bg-rose-500/80 rounded-lg flex items-center justify-center"><Zap size={12} className="text-white" /></div>
-            <div><p className="text-white font-semibold text-sm">6.5%</p><p className="text-white/50 text-[11px]">CVR</p></div>
-          </div>
-        </div>
+        <FeatureCard icon={Store} title="Stores and coupons" text="Add stores, codes and deals; they go live on the website." color="bg-amber-500/80" />
+        <FeatureCard icon={TrendingUp} title="Every use counted" text="Each code reveal and store visit is tracked per store and coupon." color="bg-blue-600" />
+        <FeatureCard icon={ShoppingCart} title="Sales and profit" text="Confirm sales from your affiliate reports and see the commission." color="bg-emerald-600" />
       </div>
     </div>
   );

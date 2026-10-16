@@ -2,9 +2,11 @@
 # Deploys Coupon Follow on a CloudPanel server straight from GitHub: pull → build → install/update.
 # API, admin (/admin) and website (/) on one domain, as in deploy/DEPLOY-CLOUDPANEL.md.
 #
-# Run as root:  bash git-deploy.sh <domain> [branch]
-#   First run   installs (asks for the database, optional SMTP and the first admin).
+# Run as root:  bash git-deploy.sh <domain> [branch] [--reset-content]
+#   First run   installs with an empty database (asks for the database, optional SMTP and the admin).
 #   Later runs  update the code only (backup first; .env, uploads and the database are kept).
+#   --reset-content  also removes ALL content (stores, coupons, blogs, categories, clicks, settings,
+#                    images) and every account except one admin, after the backup. For hand-over.
 #
 # The repo is private, so the server reads it with a deploy key: /root/.ssh/coupon_follow_deploy.
 # If the key is missing or not yet added on GitHub, this script creates/prints it and stops.
@@ -16,8 +18,10 @@ if [[ -z "${CF_DEPLOY_COPY:-}" ]]; then
   CF_DEPLOY_COPY=1 exec bash "$copy" "$@"
 fi
 
-DOMAIN="${1:?Usage: bash git-deploy.sh <domain> [branch]}"
-BRANCH="${2:-main}"
+RESET=""; ARGS=()
+for arg in "$@"; do [[ "$arg" == --reset-content ]] && RESET=--reset-content || ARGS+=("$arg"); done
+DOMAIN="${ARGS[0]:?Usage: bash git-deploy.sh <domain> [branch] [--reset-content]}"
+BRANCH="${ARGS[1]:-main}"
 SRC="${SRC:-/root/coupon-follow-src}"
 # An existing checkout keeps the address it was cloned with (SSH deploy key, or HTTPS with a token).
 REPO="${REPO:-$(git -C "$SRC" remote get-url origin 2>/dev/null || echo git@github.com:jasonapp2244/Coupon-Flow.git)}"
@@ -97,22 +101,22 @@ say "Installing front-end packages"
 SITE_DIR="$(ls -d /home/*/htdocs/"$DOMAIN" 2>/dev/null | head -1 || true)"
 [[ -n "$SITE_DIR" ]] || die "No /home/*/htdocs/$DOMAIN. Create the PHP site in CloudPanel first."
 FIRST=1; [[ -f "$SITE_DIR/.env" ]] && FIRST=0
+[[ $FIRST == 0 || -z "$RESET" ]] || die "--reset-content is for an installed site; a first install starts empty anyway."
 
 say "Building the API, admin and website for https://$DOMAIN"
 API_URL="https://$DOMAIN" SITE_URL="https://$DOMAIN" bash "$BACKEND/deploy/build-release.sh"
 cp "$BACKEND/deploy/cloudpanel/deploy.sh" "$BACKEND/deploy/cloudpanel/patch-vhost.py" "$RELEASE/"
-mkdir -p "$BACKEND/deploy/content/storage"
-php "$BACKEND/deploy/zip.php" "$BACKEND/deploy/content/storage" "$RELEASE/storage.zip"
+
+# A first install starts with an empty database: the admin adds the stores and coupons.
 if [[ $FIRST == 1 ]]; then
-  [[ -f "$BACKEND/deploy/content/catalog.sql" ]] || die "deploy/content/catalog.sql is not in the repo (run deploy/export-content.sh on the PC and push)."
-  cp "$BACKEND/deploy/content/catalog.sql" "$RELEASE/content.sql"
+  bash "$RELEASE/deploy.sh" "$DOMAIN" --fresh
+else
+  bash "$RELEASE/deploy.sh" "$DOMAIN" $RESET
 fi
 
-bash "$RELEASE/deploy.sh" "$DOMAIN"
-
-# On a first install the API wasn't live while the website was built, so its pages weren't
-# pre-rendered and the sitemap only had fixed pages. Build it once more against the live API.
-if [[ $FIRST == 1 ]]; then
+# The website is pre-rendered from the live API at build time. On a first install the API wasn't
+# live yet, and after a reset the build still holds the removed pages: build it once more.
+if [[ $FIRST == 1 || -n "$RESET" ]]; then
   say "Pre-rendering the website against the live API"
   rm -rf "$SRC/Coupon_Flow_Website/dist"
   (cd "$SRC/Coupon_Flow_Website" && VITE_API_URL="https://$DOMAIN/api/v1" VITE_SITE_URL="https://$DOMAIN" $PNPM build 2>&1 | grep -E "sitemap|prerender|rror" || true)

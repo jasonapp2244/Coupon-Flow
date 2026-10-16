@@ -60,7 +60,7 @@ export GIT_SSH_COMMAND="ssh -i /root/.ssh/coupon_follow_deploy -o IdentitiesOnly
 - backs up the site folder;
 - unpacks the API, `/admin` and the website;
 - writes `.env`;
-- imports the catalogue from `deploy/content/` (stores, coupons, blogs, settings, images);
+- creates empty tables and asks for the admin account (the site starts with no stores, coupons or blogs);
 - migrates, links storage, builds the caches and adds the cron job;
 - patches the Nginx Vhost (step 6, checked with `nginx -t`, with the old one put back on failure);
 - checks the site;
@@ -85,9 +85,21 @@ Then on GitHub: the repo → **Settings → Secrets and variables → Actions** 
 
 Delete `/root/.ssh/github_actions` from the server afterwards. Only its `.pub` half in `authorized_keys` is needed there.
 
-**Content:** the catalogue in `deploy/content/` comes from `bash deploy/export-content.sh` on the PC. It is only imported on the first install. After that, edit content in the live admin.
+**Content:** a new install starts empty; the admin adds stores, coupons and blogs in the live admin.
 
-**Without GitHub:** `DOMAIN=<domain> bash deploy/build-cloudpanel.sh` on the PC builds one bundle. Upload it, then on the server run `tar xzf coupon-follow-cloudpanel.tar.gz && bash deploy.sh <domain>`.
+**Hand-over reset (remove all content, keep one admin):** on the server, as root:
+
+```bash
+cd /root/coupon-follow-src && git fetch -q origin main && git reset -q --hard origin/main && bash Coupon_Flow_Backend/deploy/cloudpanel/git-deploy.sh <domain> main --reset-content
+```
+
+It updates the code, backs up the database, then asks for the admin email to keep (Enter = the
+current one) and an optional new password (12+ characters), and asks you to type `RESET`. It then
+removes every store, coupon, code, blog, category, feed, click, rating, activity entry, site
+setting and uploaded image, and every other account, and rebuilds the website. Undo: import
+`/root/coupon-follow-backups/<time>/database.sql.gz`.
+
+**Without GitHub:** `DOMAIN=<domain> bash deploy/build-cloudpanel.sh` on the PC builds one bundle. Upload it, then on the server run `tar xzf coupon-follow-cloudpanel.tar.gz && bash deploy.sh <domain> --fresh`.
 
 **CloudPanel's Vhost editor:** the Vhost change is written to Nginx's file directly. If you later save the Vhost in CloudPanel's editor, paste in `vhost-applied.conf` from the backup folder (`/root/coupon-follow-backups/<time>/`), or the change is lost.
 
@@ -173,9 +185,9 @@ built against `https://example.com/api/v1`.
    php artisan config:cache && php artisan route:cache && php artisan view:cache
    ```
 
-## 4. Bring the content over (stores, coupons, categories, blogs, settings)
+## 4. Optional: bring local content over (stores, coupons, categories, blogs, settings)
 
-The content exists only in the local database. To reuse it instead of re-entering it:
+Skip this for a site that starts empty. The local database holds demo content; to copy it instead:
 
 1. On your PC, export it:
    `F:\xampp\mysql\bin\mysqldump.exe -u root coupon_follow > coupon_follow.sql`

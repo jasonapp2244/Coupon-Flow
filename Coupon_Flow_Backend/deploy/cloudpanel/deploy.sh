@@ -11,11 +11,22 @@
 #   Later runs  update: maintenance mode, database + code backup, new code (keeps .env, storage
 #               and the database), migrations, caches, back online.
 #
-# Options: --fresh   first install with an empty database and a new admin instead of content.sql
+# Options: --fresh          first install with an empty database and a new admin instead of content.sql
+#          --reset-content  on an update: after the backup, remove ALL stores, coupons, blogs,
+#                           categories, clicks, settings and images and every account except one
+#                           admin (asks which, and optionally sets its new password)
 set -euo pipefail
 
-DOMAIN="${1:?Usage: bash deploy.sh <domain> [--fresh]}"
-FRESH=0; [[ "${2:-}" == "--fresh" ]] && FRESH=1
+DOMAIN="${1:?Usage: bash deploy.sh <domain> [--fresh] [--reset-content]}"
+FRESH=0; RESET=0
+for arg in "${@:2}"; do
+  case "$arg" in
+    --fresh) FRESH=1 ;;
+    --reset-content) RESET=1 ;;
+    *) printf 'Unknown option: %s
+' "$arg" >&2; exit 1 ;;
+  esac
+done
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
 say()  { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
@@ -30,7 +41,7 @@ PHP="$(command -v php8.3 || command -v php8.2 || command -v php || true)"
 [[ -n "$PHP" ]] || die "PHP not found."
 "$PHP" -r 'exit(PHP_VERSION_ID >= 80200 ? 0 : 1);' || die "$PHP is older than 8.2."
 "$PHP" -m | grep -qi '^zip$' || die "$PHP has no zip extension (apt install ${PHP##*/}-zip)."
-for f in api.zip admin.zip website.zip storage.zip; do [[ -f "$HERE/$f" ]] || die "Missing $f next to deploy.sh."; done
+for f in api.zip admin.zip website.zip; do [[ -f "$HERE/$f" ]] || die "Missing $f next to deploy.sh."; done
 STAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP_DIR="/root/coupon-follow-backups/$STAMP"
 VHOST="/etc/nginx/sites-enabled/$DOMAIN.conf"
@@ -86,9 +97,55 @@ apply_vhost() {
   fi
 }
 
+# Sets KEY=value lines in .env from SET_KEY variables passed in the environment.
+write_env() {
+  "$PHP" -r '
+    $file = $argv[1]; $env = file_get_contents($file);
+    foreach (getenv() as $name => $value) {
+        if (strncmp($name, "SET_", 4) !== 0) continue;
+        $key = substr($name, 4);
+        // Plain values as they are; anything else quoted so .env reads it back exactly.
+        if (preg_match("/^[A-Za-z0-9_.:\/@+-]*$/", $value)) $out = $value;
+        elseif (strpos($value, "\x27") === false) $out = "\x27".$value."\x27";
+        else $out = "\"".strtr($value, ["\\" => "\\\\", "\"" => "\\\"", "\$" => "\\\$"])."\"";
+        $line = "$key=$out";
+        $pattern = "/^".preg_quote($key, "/")."=.*$/m";
+        $env = preg_match($pattern, $env) ? preg_replace_callback($pattern, fn () => $line, $env) : rtrim($env)."\n$line\n";
+    }
+    file_put_contents($file, $env);' "$SITE_DIR/.env"
+}
+
+# Hand-over reset (--reset-content): asked before the site goes down, run after the backup and
+# migrations. Keeps one admin account, removes everything else.
+ask_reset() {
+  local current
+  current="$(MYSQL_PWD="$(env_get DB_PASSWORD)" mysql -h 127.0.0.1 -u "$(env_get DB_USERNAME)" -N "$(env_get DB_DATABASE)" -e "SELECT email FROM users WHERE role='admin' ORDER BY id LIMIT 1")"
+  say "Reset content: ALL stores, coupons, blogs, categories, clicks, settings and images will be removed"
+  read -rp "  Admin account to keep [$current]: " RESET_MAIL; RESET_MAIL="${RESET_MAIL:-$current}"
+  [[ "$RESET_MAIL" == ?*@?* && "$RESET_MAIL" != *[[:space:]\'\"]* ]] || die "Not an email address: $RESET_MAIL"
+  while :; do
+    read -rsp "  New password for $RESET_MAIL (12+ characters; empty keeps the current one): " RESET_PASS; echo
+    [[ -z "$RESET_PASS" || ${#RESET_PASS} -ge 12 ]] && break; warn "Use at least 12 characters."
+  done
+  [[ -n "$RESET_PASS" || "$RESET_MAIL" == "$current" ]] || die "$RESET_MAIL is not the current admin: give it a password."
+  read -rp "  Type RESET to continue: " a; [[ "$a" == RESET ]] || die "Stopped; nothing changed."
+}
+reset_content() {
+  say "Removing all content (backup: $BACKUP_DIR/database.sql.gz)"
+  artisan config:clear
+  if [[ -n "$RESET_PASS" ]]; then
+    # AdminSeeder creates the account or resets its password; the password leaves .env right after.
+    SET_ADMIN_EMAIL="$RESET_MAIL" SET_ADMIN_PASSWORD="$RESET_PASS" write_env
+    artisan db:seed --class=AdminSeeder --force
+    SET_ADMIN_PASSWORD="" write_env
+  fi
+  artisan content:reset --force "--keep-admin='$RESET_MAIL'"
+}
+
 # ════════════════════════════════════════ UPDATE ════════════════════════════════════════
 if [[ -f "$SITE_DIR/.env" ]]; then
   say "Updating $DOMAIN ($SITE_DIR, user $SITE_USER). Backups: $BACKUP_DIR"
+  [[ $RESET == 1 ]] && ask_reset
   artisan down --retry=30 || true
   DB_NAME="$(env_get DB_DATABASE)"; DB_USER="$(env_get DB_USERNAME)"
   MYSQL_PWD="$(env_get DB_PASSWORD)" mysqldump -h 127.0.0.1 -u "$DB_USER" --single-transaction --no-tablespaces "$DB_NAME" | gzip > "$BACKUP_DIR/database.sql.gz"
@@ -110,6 +167,7 @@ if [[ -f "$SITE_DIR/.env" ]]; then
   unzip_to "$HERE/website.zip" "$SITE_DIR/website"
   ensure_dirs
   artisan migrate --force
+  [[ $RESET == 1 ]] && reset_content
   caches
   artisan queue:restart || true
   artisan up
@@ -134,7 +192,7 @@ say "Unpacking the API, admin and website"
 unzip_to "$HERE/api.zip" "$SITE_DIR"
 unzip_to "$HERE/admin.zip" "$SITE_DIR/public/admin"
 unzip_to "$HERE/website.zip" "$SITE_DIR/website"
-unzip_to "$HERE/storage.zip" "$SITE_DIR/storage/app/public"
+[[ -f "$HERE/storage.zip" ]] && unzip_to "$HERE/storage.zip" "$SITE_DIR/storage/app/public"
 ensure_dirs
 
 say "Database"
@@ -158,24 +216,6 @@ if [[ -n "$MAIL_HOST" ]]; then
   read -rsp "  SMTP password: " MAIL_PASS; echo
   read -rp  "  From address [$MAIL_FROM]: " p; MAIL_FROM="${p:-$MAIL_FROM}"
 fi
-
-# Sets KEY=value lines in .env from SET_KEY variables passed in the environment.
-write_env() {
-  "$PHP" -r '
-    $file = $argv[1]; $env = file_get_contents($file);
-    foreach (getenv() as $name => $value) {
-        if (strncmp($name, "SET_", 4) !== 0) continue;
-        $key = substr($name, 4);
-        // Plain values as they are; anything else quoted so .env reads it back exactly.
-        if (preg_match("/^[A-Za-z0-9_.:\/@+-]*$/", $value)) $out = $value;
-        elseif (strpos($value, "\x27") === false) $out = "\x27".$value."\x27";
-        else $out = "\"".strtr($value, ["\\" => "\\\\", "\"" => "\\\"", "\$" => "\\\$"])."\"";
-        $line = "$key=$out";
-        $pattern = "/^".preg_quote($key, "/")."=.*$/m";
-        $env = preg_match($pattern, $env) ? preg_replace_callback($pattern, fn () => $line, $env) : rtrim($env)."\n$line\n";
-    }
-    file_put_contents($file, $env);' "$SITE_DIR/.env"
-}
 
 say "Writing .env"
 cp "$SITE_DIR/.env.example" "$SITE_DIR/.env"

@@ -168,6 +168,8 @@ export default function HomePage() {
         </section>
       )}
 
+      {/* Hidden while the site has no coupons or stores yet, like the other home sections. */}
+      {!(featured.data && !featured.error && featuredCoupons.length === 0) && (
       <section className="page pt-16" aria-labelledby="featured-heading">
         <SectionHead id="featured-heading" title="Featured coupons" intro="Standout savings from popular stores, picked by our team." link="/coupons" linkText="See all coupons" />
         <div className="mt-7">
@@ -178,7 +180,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      )}
 
+      {!(stores.data && !stores.error && topStores.length === 0) && (
       <section className="page pt-16" aria-labelledby="stores-heading">
         <SectionHead id="stores-heading" title="Top stores" intro="Popular brands with codes ready to use." link="/stores" linkText="Stores A to Z" />
         {stores.loading && !stores.data && <div className="mt-7"><CardSkeletons count={6} className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6" /></div>}
@@ -198,6 +202,7 @@ export default function HomePage() {
           </ul>
         )}
       </section>
+      )}
 
       <section className="page pt-20" aria-labelledby="how-heading">
         <div className="text-center">
