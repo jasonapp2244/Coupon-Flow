@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, X, Edit, Trash2, FolderOpen } from 'lucide-react';
 import { Card, Button, PageHeader, statusBadge } from '../components/ui';
 import { ConfirmModal } from '../components/Modal';
@@ -43,11 +43,18 @@ function CategoryModal({ type, initial, onClose, onSaved }: CategoryModalProps) 
     }
   };
 
+  useEffect(() => {
+    if (saving) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [saving, onClose]);
+
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" role="dialog" aria-modal="true" aria-labelledby="category-modal-title">
       <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-semibold text-slate-800">{initial ? 'Edit Category' : 'Create Category'}</h3>
+          <h3 id="category-modal-title" className="font-semibold text-slate-800">{initial ? 'Edit Category' : 'Create Category'}</h3>
           <button onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
         </div>
         <div className="space-y-4">

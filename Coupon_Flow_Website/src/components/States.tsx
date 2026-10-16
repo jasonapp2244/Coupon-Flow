@@ -153,7 +153,7 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
         {items.map((c, i) => (
           <li key={c.label} className="flex items-center gap-1">
             {i > 0 && <ChevronRight size={14} aria-hidden="true" />}
-            {c.to ? <Link to={c.to} className="hover:text-ink hover:underline">{c.label}</Link> : <span aria-current="page" className="text-ink-soft">{c.label}</span>}
+            {c.to ? <Link to={c.to} className="-my-1 inline-block py-1 hover:text-ink hover:underline">{c.label}</Link> : <span aria-current="page" className="text-ink-soft">{c.label}</span>}
           </li>
         ))}
       </ol>

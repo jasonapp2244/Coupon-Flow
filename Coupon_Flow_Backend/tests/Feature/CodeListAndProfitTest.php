@@ -136,6 +136,13 @@ class CodeListAndProfitTest extends TestCase
         $file = UploadedFile::fake()->createWithContent('codes.csv', "X-2\nX-3\n\"X-4\",note\n");
         $this->post("/api/v1/admin/coupons/{$coupon->id}/codes", ['file' => $file], ['Accept' => 'application/json'])
             ->assertCreated()->assertJson(['added' => 2, 'skipped' => 1, 'total' => 4, 'left' => 4]);
+        // A spreadsheet export: byte-order mark and a "Coupon code" header row, which is not a code.
+        $export = UploadedFile::fake()->createWithContent('export.csv', "\xEF\xBB\xBFCoupon code,Note\nX-5,first\n");
+        $this->post("/api/v1/admin/coupons/{$coupon->id}/codes", ['file' => $export], ['Accept' => 'application/json'])
+            ->assertCreated()->assertJson(['added' => 1, 'total' => 5]);
+        $this->assertFalse($coupon->codes()->where('code', 'like', '%code%')->exists());
+        $coupon->codes()->where('code', 'X-5')->delete();
+        $coupon->syncCodeCounts();
         $this->postJson("/api/v1/admin/coupons/{$coupon->id}/codes", ['codes' => " \n , "])->assertJsonValidationErrors('codes');
 
         $this->app['auth']->forgetGuards();

@@ -75,7 +75,7 @@ export function CategoryPage() {
         <section className="mt-12" aria-labelledby="coupons-heading">
           <div className="flex items-end justify-between gap-4">
             <h2 id="coupons-heading" className="section-title">Latest {category.name.toLowerCase()} coupons</h2>
-            <Link to={`/coupons?category=${category.slug}`} className="shrink-0 text-sm font-semibold text-deal-dark underline decoration-marigold decoration-2 underline-offset-4 hover:decoration-deal">See all</Link>
+            <Link to={`/coupons?category=${category.slug}`} className="link-more">See all</Link>
           </div>
           {data.coupons.length === 0
             ? <div className="mt-5"><EmptyState title="No offers in this category right now">We add new codes as stores release them, so check back soon.</EmptyState></div>

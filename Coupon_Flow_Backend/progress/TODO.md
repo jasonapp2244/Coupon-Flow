@@ -1,6 +1,9 @@
 # TODO
 
 ## Blocked on user
+- [x] Commit the end-to-end test fixes + responsive changes (committed and pushed to main 2026-10-16).
+- [ ] Optional: a "Delete" for test/junk click rows in Redemptions (E2E clean-up had to delete 28 rows in the DB).
+- [ ] Leftover local accounts: switched-off staff `tauseefchoohan0401+e2e@gmail.com` (E2E) and a "customer" user `tauseefchoohan0401@gmail.com`; remove in the DB if not wanted.
 - [ ] Client to review the 5 blog articles (edit in Admin → Blogs); publish the Nike draft when ready.
 - [ ] Client to review the site copy (store About texts, coupon wording, legal pages; the legal pages are not legal advice).
 - [ ] Set a support email in Admin → Settings → General: Contact currently says details are "being set up".

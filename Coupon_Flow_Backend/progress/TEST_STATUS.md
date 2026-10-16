@@ -3,6 +3,12 @@
 _Last run: 2026-10-16_
 
 ## Backend
+Responsive check (2026-10-16), headless Chrome with touch and device scale on phones and tablets, 15 pages × 15 sizes from 320 px to 2560 px:
+- **After the fixes:** no sideways overflow, no clipped text, no text under 12 px, no distorted images, no touch target under 24 px.
+- **Pop-up and mobile menu** checked at 320×568, 667×375, 844×390 and 768×1024: the close button stays reachable, and the pop-up scrolls only on short screens.
+- **Errors:** the only console errors were API rate-limit responses (HTTP 429; 120 requests per minute per visitor) caused by the audit's rapid page loads.
+- **Build:** website tsc clean; build OK (28 URLs, pre-render OK). Backend unchanged.
+
 Website copy pass (2026-10-16):
 - `php artisan test`: **125 passed (828 assertions)**. HomepageSettingsTest now expects the new default headline.
 - pint passed. Website tsc clean.

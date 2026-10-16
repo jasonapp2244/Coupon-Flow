@@ -60,4 +60,20 @@ class AuthTest extends TestCase
             'password_confirmation' => 'NewPass1234',
         ])->assertOk();
     }
+
+    public function test_sign_in_is_rate_limited_and_the_admin_can_read_the_wait_time(): void
+    {
+        config(['cors.allowed_origins' => ['http://admin.test']]);
+        User::factory()->admin()->create(['email' => 'admin@couponfollow.com', 'password' => 'Admin1234']);
+        $attempt = fn () => $this->withHeader('Origin', 'http://admin.test')
+            ->postJson('/api/v1/auth/login', ['email' => 'admin@couponfollow.com', 'password' => 'wrong']);
+
+        for ($i = 0; $i < 10; $i++) {
+            $attempt()->assertStatus(422);
+        }
+
+        // The admin turns Retry-After into "wait N seconds"; a cross-origin page only sees it when exposed.
+        $response = $attempt()->assertStatus(429)->assertHeader('Retry-After');
+        $this->assertStringContainsString('Retry-After', (string) $response->headers->get('Access-Control-Expose-Headers'));
+    }
 }

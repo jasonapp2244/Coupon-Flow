@@ -56,7 +56,7 @@ export default function HeroSlider({ slides }: { slides: HeroSlide[] }) {
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={e => { if (!box.current?.contains(e.relatedTarget as Node)) setPaused(false); }}
-      className="relative aspect-[4/3] w-full overflow-hidden rounded-3xl bg-ink shadow-[0_30px_60px_-25px_rgb(0_0_0/0.7)] ring-1 ring-white/10"
+      className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl min-[420px]:aspect-[4/3] sm:aspect-[16/9] lg:aspect-[4/3] bg-ink shadow-[0_30px_60px_-25px_rgb(0_0_0/0.7)] ring-1 ring-white/10"
     >
       {slides.map((slide, i) => {
         const active = i === index;
@@ -75,7 +75,7 @@ export default function HeroSlider({ slides }: { slides: HeroSlide[] }) {
                 className={`h-full w-full object-cover transition-transform duration-[7000ms] ease-out ${active ? 'scale-105' : 'scale-100'}`} />
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-ink-deep via-ink-deep/40 to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8">
+            <div className="absolute inset-x-0 bottom-0 p-5 min-[420px]:p-6 sm:p-8">
               <p className="font-display text-2xl font-extrabold leading-tight tracking-tight text-white sm:text-3xl">{slide.title}</p>
               {slide.subtitle && <p className="mt-2 max-w-md text-white/80">{slide.subtitle}</p>}
               <SlideButton slide={slide} />
@@ -96,10 +96,11 @@ export default function HeroSlider({ slides }: { slides: HeroSlide[] }) {
               <ChevronRight size={18} />
             </button>
           </div>
-          <div className="absolute left-6 top-[1.6rem] flex gap-1.5 sm:left-8">
+          <div className="absolute left-6 top-[1.1rem] flex gap-0.5 sm:left-8">
             {slides.map((_, i) => (
-              <button key={i} onClick={() => go(i)} aria-label={`Show slide ${i + 1}`} aria-current={i === index}
-                className={`h-1.5 rounded-full shadow-sm transition-all ${i === index ? 'w-8 bg-white' : 'w-4 bg-white/45 hover:bg-white/75'}`} />
+              <button key={i} onClick={() => go(i)} aria-label={`Show slide ${i + 1}`} aria-current={i === index} className="group/dot flex h-6 min-w-6 items-center justify-center px-0.5">
+                <span className={`block h-1.5 rounded-full shadow-sm transition-all ${i === index ? 'w-8 bg-white' : 'w-4 bg-white/45 group-hover/dot:bg-white/75'}`} />
+              </button>
             ))}
           </div>
         </>

@@ -103,6 +103,11 @@ async function send(method: string, path: string, body?: unknown): Promise<Respo
       unauthorizedHandler?.();
     }
     if (response.status === 403 && data.code === 'two_factor_setup_required') twoFactorRequiredHandler?.();
+    if (response.status === 429) {
+      // Laravel's own text is just "Too Many Attempts."; say how long to wait instead.
+      const seconds = Number(response.headers.get('Retry-After')) || 60;
+      throw new ApiError(429, `Too many tries in a short time. Wait ${seconds < 60 ? `${seconds} seconds` : 'a minute'}, then try again.`);
+    }
     throw new ApiError(response.status, data.message || `Request failed (${response.status})`, data.errors ?? {});
   }
 

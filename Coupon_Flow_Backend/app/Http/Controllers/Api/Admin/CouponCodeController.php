@@ -54,9 +54,18 @@ class CouponCodeController extends Controller
             'file' => ['required_without:codes', 'nullable', 'file', 'mimes:csv,txt', 'max:2048'],
         ]);
 
-        $lines = $request->hasFile('file')
-            ? array_map(fn (string $line) => str_getcsv($line)[0] ?? '', file($request->file('file')->getRealPath(), FILE_IGNORE_NEW_LINES) ?: [])
-            : preg_split('/[\r\n,]+/', (string) $request->input('codes'));
+        if ($request->hasFile('file')) {
+            $lines = array_map(fn (string $line) => str_getcsv($line)[0] ?? '', file($request->file('file')->getRealPath(), FILE_IGNORE_NEW_LINES) ?: []);
+            if ($lines) {
+                // Spreadsheet exports start with a byte-order mark and often a header row ("code"); neither is a code.
+                $lines[0] = preg_replace('/^\xEF\xBB\xBF/', '', $lines[0]);
+                if (preg_match('/^\s*"?\s*(coupon[\s_-]*)?codes?\s*"?\s*$/i', $lines[0])) {
+                    array_shift($lines);
+                }
+            }
+        } else {
+            $lines = preg_split('/[\r\n,]+/', (string) $request->input('codes'));
+        }
 
         $codes = collect($lines)
             ->map(fn ($code) => trim((string) $code, " \t\"'"))

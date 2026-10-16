@@ -21,7 +21,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         RateLimiter::for('auth', fn (Request $request) => Limit::perMinute(10)->by($request->ip()));
-        RateLimiter::for('public', fn (Request $request) => Limit::perMinute(120)->by($request->ip()));
+        // Generous: one page makes several calls, and many shoppers can share one address (offices, mobile networks).
+        RateLimiter::for('public', fn (Request $request) => Limit::perMinute(300)->by($request->ip()));
         RateLimiter::for('clicks', fn (Request $request) => Limit::perMinute(30)->by($request->ip()));
         // Feed runs fetch remote URLs and write many rows: a few per minute per person is plenty.
         RateLimiter::for('feeds', fn (Request $request) => Limit::perMinute(6)->by($request->user()?->id ?: $request->ip()));

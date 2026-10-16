@@ -211,8 +211,8 @@ function MobileMenu() {
 
 function Footer() {
   const { site_name, support_email } = useSite();
-  const col = 'flex flex-col gap-2.5 text-sm';
-  const link = 'text-white/70 transition-colors hover:text-white';
+  const col = 'flex flex-col items-start gap-1 text-sm';
+  const link = 'inline-block py-1 text-white/70 transition-colors hover:text-white';
   const heading = 'mb-1 text-sm font-semibold text-marigold';
 
   return (

@@ -4,7 +4,8 @@ _Last updated: 2026-10-16_
 
 **Repository:** one git repo at `F:\React_project` (backend, admin and website as subfolders, root `README.md` +
 `.gitignore`), pushed to https://github.com/jasonapp2244/Coupon-Flow (branch `main`, first commit `976466f`,
-2026-10-07; paid-removal + code lists pushed as 9e24f83 on 2026-10-15). No `.env`, `vendor`, `node_modules` or `dist` in it.
+2026-10-07; paid-removal + code lists pushed as 9e24f83 on 2026-10-15; redesign, editable hero, article editor and copy
+rewrite pushed as 5229d39 on 2026-10-16). No `.env`, `vendor`, `node_modules` or `dist` in it.
 
 ## Overall roadmap
 | Phase | Scope | Status |
@@ -15,6 +16,44 @@ _Last updated: 2026-10-16_
 | 3 | Public website (`../Coupon_Flow_Website`) | ✅ Done — see below |
 | 4 | Payments go-live (Stripe) | ❌ Removed 2026-10-15 at the user's request (see below); no payments at all |
 | 5 | Audit fixes, public site redesign, full test, SiteGround deploy | 🟡 Code, tests and release packaging done; live upload waits on user inputs (see TODO) |
+
+## Follow-up — end-to-end test of every feature, admin + website (2026-10-16)
+Client: test every feature of the admin panel and the website.
+
+**How it ran:**
+- 5 Playwright suites (144 checks) in headless Chrome against the local API.
+- The admin was served as a production build (`vite preview`, :8443). The suites live in the session scratchpad and are not in the repo.
+- All test data was named "E2E Test…" and removed afterwards, permanently deleted from Trash too.
+- The only test identity was the plus-address `tauseefchoohan0401+e2e@gmail.com`.
+
+**Bugs found and fixed (all uncommitted):**
+1. **CSV code upload imported the header row as a code**, and the byte-order mark too. Fixed in `Admin/CouponCodeController@store`; test added in `CodeListAndProfitTest`.
+2. **Admin login:** the form's own messages ("Enter a valid email") were never reachable, because the browser's built-in validation blocked them. Added `noValidate` on the login and forgot-password forms.
+3. **Website showed the raw "Too Many Attempts."** The website now shows a plain wait message, and the public limit was raised from 120 to 300 a minute, since many shoppers can share one address.
+4. **Admin dialogs ignored Escape**, and had no dialog roles or labelled close buttons. Fixed in `Modal.tsx` (ConfirmModal, Modal, Drawer) and the category dialog.
+5. **Reset-password link opened in a tab already showing the admin sign-in page stayed on that screen.** Only the hash changed, and the view was chosen once. `LoginPage` now follows the link.
+6. **Admin showed the raw "Too Many Attempts."** It now says "Too many tries… Wait N seconds". `Retry-After` was added to the CORS exposed headers; test in `AuthTest`.
+
+**Data afterwards:**
+- No E2E records, test feed or test redemptions remain. 28 test click rows were deleted by hand; the API has no delete for them.
+- Settings are back to their values from before testing. A `notifications` row now exists, holding the defaults.
+- No real coupon was clicked by the tests.
+- The test staff account is left switched off, because staff can't be deleted.
+
+## Follow-up — responsive check, every device (2026-10-16)
+Audited 15 public pages at 15 sizes: phones 320–430, phone landscape 667×375 and 844×390, tablets 768–1024 in both
+orientations, desktops 1280–2560. Before the fixes there was no overflow, clipped text, tiny text or distortion; the
+problems were small tap targets and a few visual issues. Fixes:
+- **Tap targets of at least 24 px:**
+  - new `.link-more` class for "See all" links;
+  - padding on breadcrumb and footer links;
+  - slider dots are now 24 px buttons.
+- **Phones:**
+  - Home category tiles stack the icon above the name under 400 px, so names don't break mid-word.
+  - The hero slider is taller (4:5) under 420 px, so text no longer runs under the dots and arrows. It's 16:9 from 640 px up to 1024 px, then 4:3 again on desktop.
+- **Landscape phones:** new `short:` variant (landscape, at most 500 px tall) shrinks the hero headline, page titles and hero padding.
+- **Coupon pop-up:** at most the screen height, and scrolls on screens under 640 px tall. At 667×375 its button used to be cut off.
+- **Large screens:** `.page` is wider on 2xl screens (`max-w-7xl`), and the base font is 112.5% from 2200 px.
 
 ## Follow-up — full website copy pass (2026-10-16)
 Client: all website content written like a professional human copywriter.

@@ -45,7 +45,7 @@ function SectionHead({ id, title, intro, link, linkText }: { id: string; title: 
         <h2 id={id} className="section-title">{title}</h2>
         {intro && <p className="mt-1.5 text-ink-soft">{intro}</p>}
       </div>
-      {link && <Link to={link} className="shrink-0 text-sm font-semibold text-deal-dark underline decoration-marigold decoration-2 underline-offset-4 hover:decoration-deal">{linkText}</Link>}
+      {link && <Link to={link} className="link-more self-start sm:self-auto">{linkText}</Link>}
     </div>
   );
 }
@@ -120,9 +120,9 @@ export default function HomePage() {
             <div className="absolute inset-0 bg-gradient-to-r from-ink-deep via-ink-deep/85 to-ink-deep/45" aria-hidden="true" />
           </>
         )}
-        <div className="page relative grid items-center gap-10 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:py-20">
+        <div className="page relative grid items-center gap-10 py-16 short:py-10 lg:grid-cols-[1.05fr_0.95fr] lg:py-20">
           <div>
-            <h1 className="font-display text-5xl font-extrabold leading-[0.98] tracking-tight [text-wrap:balance] sm:text-7xl">
+            <h1 className="font-display text-5xl font-extrabold leading-[0.98] tracking-tight [text-wrap:balance] sm:text-7xl short:text-5xl">
               {hero.headline}
             </h1>
             {hero.subtext && <p className="mt-6 max-w-lg text-lg text-white/80">{hero.subtext}</p>}
@@ -152,12 +152,12 @@ export default function HomePage() {
               const Icon = categoryIcon(c.name, c.slug);
               return (
                 <li key={c.id}>
-                  <Link to={`/categories/${c.slug}`} className="group flex h-full items-center gap-3 rounded-2xl bg-card p-3 ring-1 ring-line transition hover:-translate-y-0.5 hover:ring-ink sm:gap-4 sm:p-4">
+                  <Link to={`/categories/${c.slug}`} className="group flex h-full flex-col items-start gap-3 rounded-2xl bg-card p-3 ring-1 ring-line transition hover:-translate-y-0.5 hover:ring-ink min-[400px]:flex-row min-[400px]:items-center sm:gap-4 sm:p-4">
                     <span className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-marigold-soft transition-colors group-hover:bg-marigold">
                       <Icon size={22} aria-hidden="true" />
                     </span>
                     <span className="min-w-0">
-                      <span className="block font-display text-lg font-semibold leading-tight [overflow-wrap:anywhere]">{c.name}</span>
+                      <span className="block font-display text-lg font-semibold leading-tight [overflow-wrap:break-word]">{c.name}</span>
                       <span className="block text-sm text-muted">{c.items_count} {c.items_count === 1 ? 'store' : 'stores'}</span>
                     </span>
                   </Link>

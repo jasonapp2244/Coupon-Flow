@@ -329,7 +329,7 @@ export function BlogPostPage() {
           <section className="mt-20" aria-labelledby="related-heading">
             <div className="flex items-end justify-between gap-4">
               <h2 id="related-heading" className="section-title">More guides</h2>
-              <Link to="/blog" className="shrink-0 text-sm font-semibold text-deal-dark underline decoration-marigold decoration-2 underline-offset-4 hover:decoration-deal">All articles</Link>
+              <Link to="/blog" className="link-more">All articles</Link>
             </div>
             <ul className="mt-6 grid gap-6 sm:grid-cols-3">
               {data.related.map(b => <li key={b.id}><BlogCard blog={b} /></li>)}

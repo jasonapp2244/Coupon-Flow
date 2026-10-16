@@ -37,9 +37,11 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
-    throw new ApiError(response.status, response.status >= 500 || !data.message
-      ? 'Something went wrong on our side. Please try again in a moment.'
-      : data.message);
+    throw new ApiError(response.status, response.status === 429
+      ? "You're browsing faster than we can keep up. Wait a few seconds, then try again."
+      : response.status >= 500 || !data.message
+        ? 'Something went wrong on our side. Please try again in a moment.'
+        : data.message);
   }
 
   if (response.status === 204) return undefined as T;

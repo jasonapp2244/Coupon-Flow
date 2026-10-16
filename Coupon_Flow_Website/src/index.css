@@ -1,5 +1,13 @@
 @import 'tailwindcss';
 
+/* Phones turned sideways: wide but very short, so big headings would fill the whole screen. */
+@custom-variant short (@media (orientation: landscape) and (max-height: 500px));
+
+/* Very large monitors: scale the whole layout up a little so it doesn't look lost in the middle. */
+@media (min-width: 2200px) {
+  html { font-size: 112.5%; }
+}
+
 @theme {
   --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Bricolage Grotesque', 'Instrument Sans', ui-sans-serif, sans-serif;
@@ -69,10 +77,14 @@ body {
     @apply mb-1.5 block text-sm font-semibold text-ink;
   }
   .page {
-    @apply mx-auto w-full max-w-6xl px-4 sm:px-6;
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6 2xl:max-w-7xl;
+  }
+  /* "See all" style links: a taller tap area on touch screens without changing the layout. */
+  .link-more {
+    @apply -my-1.5 inline-block shrink-0 py-1.5 text-sm font-semibold text-deal-dark underline decoration-marigold decoration-2 underline-offset-4 hover:decoration-deal;
   }
   .page-title {
-    @apply font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl;
+    @apply font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl short:text-4xl;
   }
   .section-title {
     @apply font-display text-2xl font-extrabold tracking-tight sm:text-3xl;

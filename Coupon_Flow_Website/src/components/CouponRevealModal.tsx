@@ -95,7 +95,7 @@ export default function CouponRevealModal() {
       aria-labelledby="reveal-title"
       onClose={close}
       onClick={e => { if (e.target === e.currentTarget) close(); }}
-      className="m-auto w-[min(32rem,calc(100%-2rem))] overflow-hidden rounded-3xl bg-card p-0 text-ink shadow-2xl backdrop:bg-ink-deep/70 backdrop:backdrop-blur-sm"
+      className="m-auto max-h-[calc(100dvh-2rem)] w-[min(32rem,calc(100%-2rem))] overflow-hidden overscroll-contain rounded-3xl [@media(max-height:640px)]:overflow-y-auto bg-card p-0 text-ink shadow-2xl backdrop:bg-ink-deep/70 backdrop:backdrop-blur-sm"
     >
       <div className="relative">
         <button onClick={close} aria-label="Close" className="absolute right-3 top-3 z-10 rounded-full bg-white/70 p-1.5 text-ink hover:bg-white">

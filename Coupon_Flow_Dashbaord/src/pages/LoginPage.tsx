@@ -105,7 +105,7 @@ function LoginForm({ onLogin, onForgot }: { onLogin: (user: User) => void; onFor
   }
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-sm mx-auto">
+    <form onSubmit={handleSubmit} noValidate className="w-full max-w-sm mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-slate-900">Welcome Back</h1>
         <p className="text-slate-500 text-sm mt-1.5">Sign in to your Coupon Follow dashboard.</p>
@@ -304,7 +304,7 @@ function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
           </button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-slate-900">Reset Your Password</h2>
             <p className="text-slate-500 text-sm mt-1.5">Enter your email address and we'll send instructions to reset your password.</p>
@@ -521,9 +521,14 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const resetToken = params.get('token');
   const resetEmail = params.get('email');
   // Password-reset emails link to #/reset-password?token=…&email=…
-  const [view, setView] = useState<AuthView>(
-    location.pathname === '/reset-password' && resetToken && resetEmail ? 'reset' : 'login',
-  );
+  const resetLink = location.pathname === '/reset-password' && resetToken && resetEmail ? resetToken : null;
+  const [view, setView] = useState<AuthView>(resetLink ? 'reset' : 'login');
+  // The link can also open in a tab already showing this page (only the hash changes), so follow it here too.
+  const [seenLink, setSeenLink] = useState(resetLink);
+  if (resetLink !== seenLink) {
+    setSeenLink(resetLink);
+    if (resetLink) setView('reset');
+  }
   const backToLogin = () => { setView('login'); navigate('/', { replace: true }); };
 
   return (
@@ -543,7 +548,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         <div className="flex-1 flex items-center justify-center px-8 py-10 bg-white lg:border-l lg:border-slate-200">
           {view === 'login' && <LoginForm onLogin={onLogin} onForgot={() => setView('forgot')} />}
           {view === 'forgot' && <ForgotPasswordForm onBack={() => setView('login')} />}
-          {view === 'reset' && resetToken && resetEmail && <ResetPasswordForm token={resetToken} email={resetEmail} onBack={backToLogin} />}
+          {view === 'reset' && resetToken && resetEmail && <ResetPasswordForm key={resetToken} token={resetToken} email={resetEmail} onBack={backToLogin} />}
         </div>
       </div>
     </div>
