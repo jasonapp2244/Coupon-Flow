@@ -27,3 +27,6 @@ step) and `POST public/stores/{slug}/rating`; the store page's rating box needs 
 ratings card and Rating column need the `admin/stores/{store}/ratings` routes from the same API release.
 
 Deploy kit ready: `deploy/DEPLOY.md` (step by step), `deploy/build-release.sh` (builds api/admin/website zips), `deploy/env.production.example`. Nothing uploaded yet: waiting for domains, SiteGround access, DB, SMTP, live Stripe keys and the go-ahead.
+
+## 2026-10-16 — CloudPanel option
+One-site CloudPanel layout (API /api, admin /admin, website /) documented in `deploy/DEPLOY-CLOUDPANEL.md`. Not yet run on a server.
