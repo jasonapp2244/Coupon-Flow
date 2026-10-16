@@ -18,8 +18,9 @@ fi
 
 DOMAIN="${1:?Usage: bash git-deploy.sh <domain> [branch]}"
 BRANCH="${2:-main}"
-REPO="${REPO:-git@github.com:jasonapp2244/Coupon-Flow.git}"
 SRC="${SRC:-/root/coupon-follow-src}"
+# An existing checkout keeps the address it was cloned with (SSH deploy key, or HTTPS with a token).
+REPO="${REPO:-$(git -C "$SRC" remote get-url origin 2>/dev/null || echo git@github.com:jasonapp2244/Coupon-Flow.git)}"
 KEY=/root/.ssh/coupon_follow_deploy
 NODE_MAJOR=20
 
@@ -30,6 +31,9 @@ die()  { printf '\033[1;31mxx  %s\033[0m\n' "$*" >&2; exit 1; }
 
 # ── GitHub access ────────────────────────────────────────────────────────────
 command -v git >/dev/null || { apt-get update -qq && apt-get install -y -qq git; }
+if [[ "$REPO" == https://* ]]; then
+  git ls-remote --heads "$REPO" "$BRANCH" >/dev/null 2>&1 || die "GitHub refused the HTTPS address (token expired or without access to the repo?)."
+else
 if [[ ! -f "$KEY" ]]; then
   mkdir -p /root/.ssh && chmod 700 /root/.ssh
   ssh-keygen -q -t ed25519 -N "" -C "coupon-follow-deploy@$(hostname)" -f "$KEY"
@@ -47,6 +51,7 @@ $(cat "$KEY.pub")
   Leave "Allow write access" OFF, save, then run this script again.
 EOF
   exit 1
+fi
 fi
 
 say "Getting $BRANCH from GitHub"
