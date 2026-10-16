@@ -56,7 +56,7 @@ unzip_to() {
 # DB_* values from .env, for mysql/mysqldump in update mode.
 env_get() { "$PHP" -r 'foreach (file($argv[1]) as $l) if (preg_match("/^".$argv[2]."=(.*)$/", trim($l), $m)) { echo trim($m[1], "\"'\''"); break; }' "$SITE_DIR/.env" "$1"; }
 ensure_dirs() {
-  mkdir -p "$SITE_DIR"/storage/{app/public,framework/{cache/data,sessions,views,testing},logs} "$SITE_DIR/bootstrap/cache"
+  mkdir -p "$SITE_DIR"/storage/{app/public,framework/{cache/data,sessions,views,testing},logs} "$SITE_DIR/bootstrap/cache" "$SITE_DIR/resources/views"
   # Nginx now serves public/, but CloudPanel's Let's Encrypt renewal writes its challenge files to
   # the site folder's .well-known: link it so certificates keep renewing.
   mkdir -p "$SITE_DIR/.well-known"
