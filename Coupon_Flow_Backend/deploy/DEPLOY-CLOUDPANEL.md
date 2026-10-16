@@ -1,5 +1,31 @@
 # Deploy on CloudPanel — one site, one domain
 
+## Deploy with `git push live main` (no GitHub access needed on the server)
+
+Your PC pushes straight to a git repo on the server. The hook `deploy/cloudpanel/post-receive`
+deploys every push to `main` with `git-deploy.sh` and shows its output in your terminal.
+
+**1. On the server, as root (once):**
+
+```bash
+git init -q --bare --initial-branch=main /root/couponhub.git && curl -fsSL -o /dev/null https://github.com || true
+```
+
+Then create the hook: paste the contents of `deploy/cloudpanel/post-receive` into
+`/root/couponhub.git/hooks/post-receive`, and run `chmod +x /root/couponhub.git/hooks/post-receive`.
+
+**2. On the PC, in Git Bash, in `F:\React_project` (once):**
+
+```bash
+git remote add live ssh://root@<server-ip>/root/couponhub.git
+```
+
+**3. First install.**
+1. On the PC: `git push live main`.
+2. On the server, run the command the push prints: `bash /root/coupon-follow-src/Coupon_Flow_Backend/deploy/cloudpanel/git-deploy.sh <domain>`. It asks for the database, SMTP and the first admin.
+
+**Every update after that:** `git push live main`. Nothing else is needed.
+
 ## One-go deploy from GitHub (does steps 2–8 for you)
 
 The server pulls the repo, builds the API, admin and website itself, and installs or updates them.

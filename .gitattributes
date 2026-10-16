@@ -1,3 +1,4 @@
 # Deploy scripts run on Linux servers: keep Unix line endings on every checkout.
 *.sh text eol=lf
 *.py text eol=lf
+post-receive text eol=lf

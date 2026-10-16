@@ -31,7 +31,10 @@ die()  { printf '\033[1;31mxx  %s\033[0m\n' "$*" >&2; exit 1; }
 
 # ── GitHub access ────────────────────────────────────────────────────────────
 command -v git >/dev/null || { apt-get update -qq && apt-get install -y -qq git; }
-if [[ "$REPO" == https://* ]]; then
+if [[ "$REPO" == /* ]]; then
+  # A repo on this server (git push from the PC, see post-receive): no GitHub access needed.
+  [[ -d "$REPO" ]] || die "$REPO not found."
+elif [[ "$REPO" == https://* ]]; then
   git ls-remote --heads "$REPO" "$BRANCH" >/dev/null 2>&1 || die "GitHub refused the HTTPS address (token expired or without access to the repo?)."
 else
 if [[ ! -f "$KEY" ]]; then

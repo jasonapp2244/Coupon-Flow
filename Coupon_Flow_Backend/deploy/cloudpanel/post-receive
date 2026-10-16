@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Git hook for "git push live main" deploys (no GitHub access needed on the server).
+# Lives in /root/couponhub.git/hooks/post-receive on the server; set up with the commands in
+# deploy/DEPLOY-CLOUDPANEL.md. Every push to main is checked out and deployed by git-deploy.sh,
+# and its output shows in the pusher's terminal.
+DOMAIN=couponhub.devonlinetestserver.com
+SRC=/root/coupon-follow-src
+BARE=/root/couponhub.git
+
+while read -r _old _new ref; do
+  [[ "$ref" == refs/heads/main ]] || continue
+  unset GIT_DIR GIT_WORK_TREE
+  [[ -d "$SRC/.git" ]] || git clone -q --branch main "$BARE" "$SRC"
+  if ls /home/*/htdocs/"$DOMAIN"/.env >/dev/null 2>&1; then
+    bash "$SRC/Coupon_Flow_Backend/deploy/cloudpanel/git-deploy.sh" "$DOMAIN" main < /dev/null
+  else
+    git -C "$SRC" fetch -q origin main && git -C "$SRC" reset -q --hard origin/main
+    echo
+    echo "Code received. Not installed yet: run the first install on the server (it asks for the database and admin):"
+    echo "  bash $SRC/Coupon_Flow_Backend/deploy/cloudpanel/git-deploy.sh $DOMAIN"
+  fi
+done
