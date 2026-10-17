@@ -4,6 +4,7 @@ namespace App\Http\Requests\Admin;
 
 use App\Enums\CouponStatus;
 use App\Enums\CouponType;
+use App\Http\Requests\Concerns\NormalizesAdminInput;
 use App\Models\Coupon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -11,6 +12,13 @@ use Illuminate\Validation\Validator;
 
 class SaveCouponRequest extends FormRequest
 {
+    use NormalizesAdminInput;
+
+    protected function prepareForValidation(): void
+    {
+        $this->normalizeSlugAndUrls(['tracking_url']);
+    }
+
     public function rules(): array
     {
         $required = $this->isMethod('post') ? 'required' : 'sometimes';

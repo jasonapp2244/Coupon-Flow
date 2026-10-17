@@ -91,7 +91,7 @@ function StoreForm({ store }: { store: Store | null }) {
           </div>
           <div>
             <Input label="Store Slug" placeholder="e.g. amazon" value={slug} helperText="Lowercase letters, numbers and dashes. Generated from the name if left empty."
-              onChange={v => { setSlug(v); clearError('slug'); }} />
+              onChange={v => { setSlug(slugify(v)); clearError('slug'); }} />
             <FieldError message={errors.slug} />
           </div>
           <div className="sm:col-span-2">

@@ -67,7 +67,7 @@ function CategoryModal({ type, initial, onClose, onSaved }: CategoryModalProps) 
           <div>
             <label htmlFor="category-slug" className="text-sm font-medium text-slate-700 block mb-1">Slug</label>
             <input id="category-slug" value={slug} placeholder="e.g. shopping-deals" className={`${inputClass} font-mono`}
-              onChange={e => { setSlugManual(true); setSlug(e.target.value); setErrors({}); }} />
+              onChange={e => { setSlugManual(true); setSlug(slugify(e.target.value)); setErrors({}); }} />
             <p className="text-xs text-slate-400 mt-0.5">Auto-generated from name</p>
             <FieldError message={errors.slug} />
           </div>

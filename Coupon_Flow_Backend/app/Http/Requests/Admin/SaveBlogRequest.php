@@ -4,11 +4,19 @@ namespace App\Http\Requests\Admin;
 
 use App\Enums\BlogStatus;
 use App\Enums\CategoryType;
+use App\Http\Requests\Concerns\NormalizesAdminInput;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class SaveBlogRequest extends FormRequest
 {
+    use NormalizesAdminInput;
+
+    protected function prepareForValidation(): void
+    {
+        $this->normalizeSlugAndUrls();
+    }
+
     public function rules(): array
     {
         $required = $this->isMethod('post') ? 'required' : 'sometimes';

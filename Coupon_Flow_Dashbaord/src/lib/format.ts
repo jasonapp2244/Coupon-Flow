@@ -50,8 +50,10 @@ export function timeAgo(value: string): string {
 /** Chart tooltip formatter: Recharts passes loosely typed values (possibly undefined). */
 export const tooltipNumber = (value: unknown) => number(Number(value ?? 0));
 
+/** "Nike.com", "https://www.nike.com" or "Nike Running" → "nike-com", "www-nike-com", "nike-running". */
 export function slugify(text: string): string {
-  return text.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-');
+  return text.toLowerCase().trim().replace(/^[a-z][a-z0-9+.-]*:\/\//, '').replace(/[\s._/]+/g, '-')
+    .replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-');
 }
 
 const SITE_URL = (import.meta.env.VITE_SITE_URL ?? 'http://127.0.0.1:5173').replace(/\/$/, '');

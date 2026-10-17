@@ -75,7 +75,7 @@ function BlogForm({ blog }: { blog: Blog | null }) {
           </div>
           <div>
             <Input label="Blog Slug" placeholder="e.g. best-amazon-deals" value={slug} helperText="URL: /blog/{slug}"
-              onChange={v => { setSlug(v); clearError('slug'); }} />
+              onChange={v => { setSlug(slugify(v)); clearError('slug'); }} />
             <FieldError message={errors.slug} />
           </div>
           <div className="flex flex-col gap-1">
