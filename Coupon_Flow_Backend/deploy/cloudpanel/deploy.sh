@@ -11,6 +11,10 @@
 #   Later runs  update: maintenance mode, database + code backup, new code (keeps .env, storage
 #               and the database), migrations, caches, back online.
 #
+# Unattended first install: set any of these and that question is skipped (useful for a one-line deploy):
+#   CF_DB_NAME CF_DB_USER CF_DB_PASS CF_DB_CREATE(y/n)  CF_MAIL_HOST CF_MAIL_PORT CF_MAIL_USER CF_MAIL_PASS
+#   CF_MAIL_FROM  CF_ADMIN_MAIL CF_ADMIN_PASS
+#
 # Options: --fresh          first install with an empty database and a new admin instead of content.sql
 #          --reset-content  on an update: after the backup, remove ALL stores, coupons, blogs,
 #                           categories, clicks, settings and images and every account except one
@@ -196,10 +200,13 @@ unzip_to "$HERE/website.zip" "$SITE_DIR/website"
 ensure_dirs
 
 say "Database"
-read -rp  "  Database name: " DB_NAME
-read -rp  "  Database user: " DB_USER
-read -rsp "  Database password: " DB_PASS; echo
-read -rp  "  Create this database and user now with clpctl? (No if you already made it in CloudPanel) [y/N] " mk
+# ask VAR "prompt" [-s]: uses $CF_VAR when set, otherwise asks (-s hides the answer).
+ask() { local preset="CF_$1"; if [[ -n "${!preset:-}" ]]; then printf -v "$1" '%s' "${!preset}"; echo "$2(preset)";
+        elif [[ "${3:-}" == -s ]]; then read -rsp "$2" "$1"; echo; else read -rp "$2" "$1"; fi; }
+ask DB_NAME "  Database name: "
+ask DB_USER "  Database user: "
+ask DB_PASS "  Database password: " -s
+ask DB_CREATE "  Create this database and user now with clpctl? (No if you already made it in CloudPanel) [y/N] "; mk="${DB_CREATE:-n}"
 if [[ "$mk" == [yY] ]]; then
   clpctl db:add --domainName="$DOMAIN" --databaseName="$DB_NAME" --databaseUserName="$DB_USER" --databaseUserPassword="$DB_PASS"
 fi
@@ -208,13 +215,13 @@ tables="$(MYSQL_PWD="$DB_PASS" mysql -h 127.0.0.1 -u "$DB_USER" -N -e "SELECT CO
 [[ "$tables" == 0 ]] || die "Database $DB_NAME already has $tables tables. Use an empty database."
 
 say "Email (staff invites, password resets, alerts)"
-read -rp "  SMTP host (leave empty to only log emails for now): " MAIL_HOST
+ask MAIL_HOST "  SMTP host (leave empty to only log emails for now): "
 MAIL_PORT=465; MAIL_USER=""; MAIL_PASS=""; MAIL_FROM="noreply@$DOMAIN"
 if [[ -n "$MAIL_HOST" ]]; then
-  read -rp  "  SMTP port [465]: " p; MAIL_PORT="${p:-465}"
-  read -rp  "  SMTP username: " MAIL_USER
-  read -rsp "  SMTP password: " MAIL_PASS; echo
-  read -rp  "  From address [$MAIL_FROM]: " p; MAIL_FROM="${p:-$MAIL_FROM}"
+  p=""; [[ -n "${CF_MAIL_PORT:-}" ]] || read -rp "  SMTP port [465]: " p; MAIL_PORT="${CF_MAIL_PORT:-${p:-465}}"
+  ask MAIL_USER "  SMTP username: "
+  ask MAIL_PASS "  SMTP password: " -s
+  p=""; [[ -n "${CF_MAIL_FROM:-}" ]] || read -rp "  From address [$MAIL_FROM]: " p; MAIL_FROM="${CF_MAIL_FROM:-${p:-$MAIL_FROM}}"
 fi
 
 say "Writing .env"
@@ -238,10 +245,10 @@ artisan migrate --force
 users="$(MYSQL_PWD="$DB_PASS" mysql -h 127.0.0.1 -u "$DB_USER" -N "$DB_NAME" -e 'SELECT COUNT(*) FROM users')"
 if [[ "$users" == 0 ]]; then
   say "First admin account (signs in at https://$DOMAIN/admin/)"
-  read -rp  "  Admin email: " ADMIN_MAIL
+  ask ADMIN_MAIL "  Admin email: "
   while :; do
-    read -rsp "  Admin password (12+ characters): " ADMIN_PASS; echo
-    [[ ${#ADMIN_PASS} -ge 12 ]] && break; warn "Use at least 12 characters."
+    ask ADMIN_PASS "  Admin password (12+ characters): " -s
+    [[ ${#ADMIN_PASS} -ge 12 ]] && break; warn "Use at least 12 characters."; unset CF_ADMIN_PASS
   done
   SET_ADMIN_EMAIL="$ADMIN_MAIL" SET_ADMIN_PASSWORD="$ADMIN_PASS" write_env
   artisan db:seed --class=AdminSeeder --force

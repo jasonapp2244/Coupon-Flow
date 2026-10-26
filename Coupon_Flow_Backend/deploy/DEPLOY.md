@@ -18,8 +18,8 @@ any folder or subdomain.
 ## 0. Before you start
 - A mailbox the API sends from, e.g. `noreply@example.com` (Site Tools > Email > Accounts). It sends
   staff invitations, password-reset links and admin alerts. Urban Goods Guide uses
-  `info@urbangoodsguide.com`: `MAIL_HOST=urbangoodsguide.com` (not `mail.…`: the certificate only covers the
-  bare domain), port 465, `MAIL_SCHEME=smtps`, the mailbox password in `MAIL_PASSWORD` (quoted). Verified
+  `info@urbangoodsguide.com`: `MAIL_HOST=giowm1084.siteground.biz` (SiteGround's server name: valid certificate, and it still works after
+  the domain moves to another server; `mail.…` fails the certificate check), port 465, `MAIL_SCHEME=smtps`, the mailbox password in `MAIL_PASSWORD` (quoted). Verified
   sending on 2026-10-26.
 - PHP 8.2 or newer for the API site (Site Tools > Devs > PHP Manager).
 

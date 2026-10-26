@@ -308,3 +308,24 @@ Then, in the admin, turn on two-step login and **Settings → Security → Requi
 This layout and the Vhost block were written from the website's `.htaccess` and CloudPanel's
 standard Laravel template, but haven't been run on a CloudPanel server. The step 9 checks confirm
 it. If CloudPanel rejects the Vhost, the error message names the line.
+
+## One command, no questions (a second site on the same server)
+
+Every first-install question can be answered up front with `CF_*` variables (see the header of
+`deploy/cloudpanel/deploy.sh`). `CF_STAFF` creates the staff accounts at the end. `SRC` gives the site its own
+checkout, so another site on the same server (and its `/root/coupon-follow-src`) is never touched.
+Run as root, with the CloudPanel site and an empty database already created:
+
+```bash
+export SRC=/root/urbangoodsguide-src GIT_SSH_COMMAND="ssh -i /root/.ssh/coupon_follow_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+CF_DB_NAME='<db>' CF_DB_USER='<user>' CF_DB_PASS='<db password>' CF_DB_CREATE=n \
+CF_MAIL_HOST=giowm1084.siteground.biz CF_MAIL_PORT=465 CF_MAIL_USER=info@urbangoodsguide.com CF_MAIL_PASS='<mailbox password>' CF_MAIL_FROM=info@urbangoodsguide.com \
+CF_ADMIN_MAIL=faizan@urbangoodsguide.com CF_ADMIN_PASS='<password>' \
+CF_STAFF='faizan@urbangoodsguide.com|Faizan|super_admin|<password>;kabir@urbangoodsguide.com|Kabir|admin|<password>' \
+bash -c '[ -d "$SRC/.git" ] || git clone -q git@github.com:jasonapp2244/Coupon-Flow.git "$SRC"; bash "$SRC/Coupon_Flow_Backend/deploy/cloudpanel/git-deploy.sh" urbangoodsguide.com'
+```
+
+Later updates: the same `export` line, then `bash "$SRC/Coupon_Flow_Backend/deploy/cloudpanel/git-deploy.sh" urbangoodsguide.com`.
+The admin logo and icons are Git LFS files: `git-deploy.sh` installs `git-lfs` and pulls them.
+Until the domain's DNS points at this server, the live checks and the pre-rendered pages use the old host:
+after switching DNS (and issuing the Let's Encrypt certificate in CloudPanel) run the update once more.

@@ -8,6 +8,10 @@
 #   --reset-content  also removes ALL content (stores, coupons, blogs, categories, clicks, settings,
 #                    images) and every account except one admin, after the backup. For hand-over.
 #
+# Optional: SRC=/root/<name>-src keeps a separate checkout per site (two sites on one server never share one).
+#           CF_STAFF="email|Name|role|password;email|Name|role|password" creates or updates staff accounts
+#           at the end (php artisan staff:create). Unattended install answers: see deploy.sh (CF_DB_NAME …).
+#
 # The repo is private, so the server reads it with a deploy key: /root/.ssh/coupon_follow_deploy.
 # If the key is missing or not yet added on GitHub, this script creates/prints it and stops.
 set -euo pipefail
@@ -35,6 +39,9 @@ die()  { printf '\033[1;31mxx  %s\033[0m\n' "$*" >&2; exit 1; }
 
 # ── GitHub access ────────────────────────────────────────────────────────────
 command -v git >/dev/null || { apt-get update -qq && apt-get install -y -qq git; }
+# The admin's logo and icons are stored with Git LFS; without it they would be text pointer files.
+git lfs version >/dev/null 2>&1 || { apt-get update -qq && apt-get install -y -qq git-lfs; }
+git lfs install --skip-repo >/dev/null
 if [[ "$REPO" == /* ]]; then
   # A repo on this server (git push from the PC, see post-receive): no GitHub access needed.
   [[ -d "$REPO" ]] || die "$REPO not found."
@@ -68,6 +75,10 @@ if [[ -d "$SRC/.git" ]]; then
   git -C "$SRC" clean -qfdx -e node_modules
 else
   git clone -q --branch "$BRANCH" "$REPO" "$SRC"
+fi
+git -C "$SRC" lfs pull
+if grep -rlsI --include='*.png' '^version https://git-lfs' "$SRC/Coupon_Flow_Dashbaord/public" "$SRC/Coupon_Flow_Website/public" >/dev/null; then
+  die "Some images are still Git LFS pointers (git lfs pull failed). Check the deploy key can read LFS objects."
 fi
 echo "  $(git -C "$SRC" log -1 --format='%h %s')"
 
@@ -129,6 +140,19 @@ if [[ $FIRST == 1 || -n "$RESET" ]]; then
   else
     warn "Website rebuild failed; the site still works (pages render in the browser). Run this script again later."
   fi
+fi
+
+if [[ -n "${CF_STAFF:-}" ]]; then
+  say "Staff accounts"
+  SITE_USER="$(stat -c %U "$SITE_DIR")"
+  IFS=';' read -ra people <<< "$CF_STAFF"
+  for p in "${people[@]}"; do
+    IFS='|' read -r s_mail s_name s_role s_pass <<< "$p"
+    [[ -n "$s_mail" ]] || continue
+    args=(staff:create "$s_mail" --name="$s_name" --role="${s_role:-admin}")
+    [[ -n "$s_pass" ]] && args+=(--password="$s_pass")
+    sudo -u "$SITE_USER" -H "$PHP" "$SITE_DIR/artisan" "${args[@]}"
+  done
 fi
 
 say "Deployed $(git -C "$SRC" log -1 --format='%h') to https://$DOMAIN"
