@@ -128,7 +128,7 @@ class AccountSecurityTest extends TestCase
             fn (ResetPassword $n) => str_starts_with($n->toMail($editor)->actionUrl, 'https://admin.test/#/reset-password?token='));
     }
 
-    public function test_production_seeding_creates_only_the_admin(): void
+    public function test_production_seeding_creates_only_the_super_admin(): void
     {
         config(['services.admin.email' => 'owner@shop.test', 'services.admin.password' => 'Str0ngPass!']);
         $this->app->detectEnvironment(fn () => 'production');
@@ -136,7 +136,7 @@ class AccountSecurityTest extends TestCase
         $this->artisan('db:seed', ['--force' => true])->assertSuccessful();
 
         $this->assertSame(['owner@shop.test'], User::pluck('email')->all());
-        $this->assertSame(Role::Admin, User::sole()->role);
+        $this->assertSame(Role::SuperAdmin, User::sole()->role);
         $this->assertSame(0, Coupon::count());
     }
 

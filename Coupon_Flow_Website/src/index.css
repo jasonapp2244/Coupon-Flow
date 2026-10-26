@@ -12,22 +12,29 @@
   --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Bricolage Grotesque', 'Instrument Sans', ui-sans-serif, sans-serif;
 
-  --color-ink: #1B2430;
-  /* The hero, the closing band and the footer: one shade deeper than ink so ink cards read on it. */
-  --color-ink-deep: #121A24;
-  --color-ink-soft: #4A5566;
-  /* Darkened from #6B7685 so small grey text passes WCAG AA (4.5:1) on paper and white. */
-  --color-muted: #5B6572;
-  --color-paper: #F5F6F8;
+  /* Urban Goods Guide brand: red #EA0728, yellow #FFE003, blue #0AA9E8, black #000000.
+     Yellow and the bright blue only ever carry black text; where white text or small text on white
+     is needed, the deeper shades below keep WCAG AA (4.5:1). */
+  --color-ink: #0B0B0B;
+  /* The hero, the closing band and the footer: pure brand black, one step deeper than ink. */
+  --color-ink-deep: #000000;
+  --color-ink-soft: #45474D;
+  --color-muted: #5C5F66;
+  --color-paper: #F6F6F6;
   --color-card: #FFFFFF;
-  --color-line: #E3E6EB;
-  --color-marigold: #FFCB3D;
-  --color-marigold-deep: #E8A800;
-  --color-marigold-soft: #FFF4D1;
-  --color-deal: #0F7B64;
-  --color-deal-dark: #0B5E4C;
-  --color-deal-soft: #E3F3EF;
-  --color-raspberry: #C42D4B;
+  --color-line: #E4E4E7;
+  --color-marigold: #FFE003;
+  /* Stars, award icons and the yellow button's edge: 3.4:1 on white, so they stay visible. */
+  --color-marigold-deep: #A88900;
+  --color-marigold-soft: #FFF8C7;
+  /* Blue: deals, "Show coupon code", verified. #0877AD carries white text (4.9:1). */
+  --color-sky: #0AA9E8;
+  --color-deal: #0877AD;
+  --color-deal-dark: #06608D;
+  --color-deal-soft: #E2F4FC;
+  /* Red: the main call to action (white text 4.6:1) and, deeper, warnings and small red text. */
+  --color-brand-red: #EA0728;
+  --color-raspberry: #C2001D;
 
   --animate-settle: settle 0.9s cubic-bezier(0.2, 0.9, 0.25, 1.15) both;
   --animate-tear: tear 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) both;
@@ -62,7 +69,7 @@ body {
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-deal px-5 py-2.5 text-sm font-semibold text-white shadow-[0_2px_0_var(--color-deal-dark)] transition hover:bg-deal-dark active:translate-y-px active:shadow-none disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand-red px-5 py-2.5 text-sm font-semibold text-white shadow-[0_2px_0_var(--color-raspberry)] transition hover:bg-raspberry active:translate-y-px active:shadow-none disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 rounded-lg bg-card px-5 py-2.5 text-sm font-semibold text-ink ring-1 ring-line transition-colors hover:bg-paper hover:ring-ink disabled:cursor-not-allowed disabled:opacity-50;
@@ -81,7 +88,7 @@ body {
   }
   /* "See all" style links: a taller tap area on touch screens without changing the layout. */
   .link-more {
-    @apply -my-1.5 inline-block shrink-0 py-1.5 text-sm font-semibold text-deal-dark underline decoration-marigold decoration-2 underline-offset-4 hover:decoration-deal;
+    @apply -my-1.5 inline-block shrink-0 py-1.5 text-sm font-semibold text-deal-dark underline decoration-sky decoration-2 underline-offset-4 hover:decoration-brand-red;
   }
   .page-title {
     @apply font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl short:text-4xl;
@@ -132,12 +139,13 @@ body {
     @apply font-semibold text-ink;
   }
   .prose-body blockquote {
-    @apply mt-6 rounded-r-xl border-l-4 border-marigold bg-marigold-soft/60 px-5 py-4 font-medium text-ink;
+    @apply mt-6 rounded-r-xl border-l-4 border-brand-red bg-marigold-soft/60 px-5 py-4 font-medium text-ink;
   }
   .prose-body > :first-child {
     @apply mt-0;
   }
-  .prose-body a {
+  /* Text links only: a button-styled link (e.g. the Contact page's email button) keeps its own colours. */
+  .prose-body a:not([class*='btn-']) {
     @apply font-semibold text-deal-dark underline underline-offset-2;
   }
 }

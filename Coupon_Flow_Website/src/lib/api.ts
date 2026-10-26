@@ -1,4 +1,4 @@
-// Client for the Coupon Follow Laravel API (public endpoints only; the site has no sign-in).
+// Client for the Urban Goods Guide Laravel API (public endpoints only; the site has no sign-in).
 
 // Production builds must set VITE_API_URL (vite.config.ts refuses to build without it).
 export const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:8000/api/v1').replace(/\/$/, '');

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-go CloudPanel deploy for Coupon Follow: API, admin (/admin) and website (/) on one domain.
+# One-go CloudPanel deploy for Urban Goods Guide: API, admin (/admin) and website (/) on one domain.
 # Layout and steps: deploy/DEPLOY-CLOUDPANEL.md.
 #
 # Run as root on the server, in the folder where the bundle was unpacked:
@@ -119,7 +119,7 @@ write_env() {
 # migrations. Keeps one admin account, removes everything else.
 ask_reset() {
   local current
-  current="$(MYSQL_PWD="$(env_get DB_PASSWORD)" mysql -h 127.0.0.1 -u "$(env_get DB_USERNAME)" -N "$(env_get DB_DATABASE)" -e "SELECT email FROM users WHERE role='admin' ORDER BY id LIMIT 1")"
+  current="$(MYSQL_PWD="$(env_get DB_PASSWORD)" mysql -h 127.0.0.1 -u "$(env_get DB_USERNAME)" -N "$(env_get DB_DATABASE)" -e "SELECT email FROM users WHERE role IN ('super_admin','admin') ORDER BY role='admin', id LIMIT 1")"
   say "Reset content: ALL stores, coupons, blogs, categories, clicks, settings and images will be removed"
   read -rp "  Admin account to keep [$current]: " RESET_MAIL; RESET_MAIL="${RESET_MAIL:-$current}"
   [[ "$RESET_MAIL" == ?*@?* && "$RESET_MAIL" != *[[:space:]\'\"]* ]] || die "Not an email address: $RESET_MAIL"

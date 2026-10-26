@@ -3,6 +3,25 @@
 
 @theme {
   --font-sans: 'Plus Jakarta Sans', sans-serif;
+
+  /* Urban Goods Guide brand: red #EA0728, yellow #FFE003, blue #0AA9E8, black #000000.
+     Red is the main action colour (white text 4.6:1). Tailwind's blue scale is the brand blue, so
+     every existing blue-* utility follows it; 600 and up are deep enough for white text and links. */
+  --color-brand: #EA0728;
+  --color-brand-dark: #C2001D;
+  --color-brand-yellow: #FFE003;
+  --color-brand-blue: #0AA9E8;
+  --color-blue-50: #E7F7FD;
+  --color-blue-100: #CDEFFB;
+  --color-blue-200: #9EDFF7;
+  --color-blue-300: #66CCF2;
+  --color-blue-400: #2EB7EC;
+  --color-blue-500: #0AA9E8;
+  --color-blue-600: #0877AD;
+  --color-blue-700: #06608D;
+  --color-blue-800: #064B6E;
+  --color-blue-900: #053A55;
+  --color-blue-950: #032537;
 }
 
 :root {
@@ -10,20 +29,20 @@
   --foreground: #0F172A;
   --card: #FFFFFF;
   --card-foreground: #0F172A;
-  --primary: #2563EB;
+  --primary: #EA0728;
   --primary-foreground: #FFFFFF;
   --secondary: #F8FAFC;
   --secondary-foreground: #475569;
   --muted: #F1F5F9;
   --muted-foreground: #94A3B8;
-  --accent: #EFF6FF;
-  --accent-foreground: #1D4ED8;
+  --accent: #E7F7FD;
+  --accent-foreground: #06608D;
   --border: #E2E8F0;
-  --ring: #93C5FD;
+  --ring: #66CCF2;
   --radius: 10px;
-  --sidebar: #0D1117;
+  --sidebar: #000000;
   --sidebar-foreground: #94A3B8;
-  --sidebar-active: #1D4ED8;
+  --sidebar-active: #EA0728;
   --sidebar-active-fg: #FFFFFF;
   --success: #10B981;
   --warning: #F59E0B;

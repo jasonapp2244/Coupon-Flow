@@ -5,7 +5,7 @@ import type { SiteSettings } from '../lib/types';
 
 /** Used until the API answers (and if it can't): the site still renders with sensible text. */
 const FALLBACK: SiteSettings = {
-  site_name: 'Coupon Follow',
+  site_name: 'Urban Goods Guide',
   support_email: '',
   meta_title: '',
   meta_description: 'Free promo codes and deals from popular stores. Reveal a code, shop in a new tab and save at checkout. No sign-up needed.',

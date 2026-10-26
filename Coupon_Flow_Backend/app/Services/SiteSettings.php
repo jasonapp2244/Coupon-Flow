@@ -13,7 +13,7 @@ class SiteSettings
 {
     /** @var array<string, array<string, mixed>> group => defaults */
     public const DEFAULTS = [
-        'general' => ['site_name' => 'Coupon Follow', 'support_email' => '', 'timezone' => 'America/New_York'],
+        'general' => ['site_name' => 'Urban Goods Guide', 'support_email' => '', 'timezone' => 'America/New_York'],
         'seo' => ['meta_title' => '', 'meta_description' => '', 'meta_keywords' => ''],
         'notifications' => ['email' => true, 'sync_alerts' => true, 'redemption_alerts' => false],
         // require_two_factor: every staff account must set up two-step login before using the admin.

@@ -30,7 +30,7 @@ return [
 
     // First admin account, created by AdminSeeder (read through config so config:cache is safe).
     'admin' => [
-        'email' => env('ADMIN_EMAIL', 'admin@couponfollow.com'),
+        'email' => env('ADMIN_EMAIL', 'faizan@urbangoodsguide.com'),
         'password' => env('ADMIN_PASSWORD'),
     ],
 

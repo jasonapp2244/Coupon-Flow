@@ -1,6 +1,6 @@
-# Project State — Coupon Follow
+# Project State — Urban Goods Guide (formerly Coupon Follow)
 
-_Last updated: 2026-10-17_
+_Last updated: 2026-10-27_
 
 **Repository:** one git repo at `F:\React_project` (backend, admin and website as subfolders, root `README.md` +
 `.gitignore`), pushed to https://github.com/jasonapp2244/Coupon-Flow (branch `main`, first commit `976466f`,
@@ -16,6 +16,42 @@ rewrite pushed as 5229d39 on 2026-10-16). No `.env`, `vendor`, `node_modules` or
 | 3 | Public website (`../Coupon_Flow_Website`) | ✅ Done — see below |
 | 4 | Payments go-live (Stripe) | ❌ Removed 2026-10-15 at the user's request (see below); no payments at all |
 | 5 | Audit fixes, public site redesign, full test, SiteGround deploy | 🟡 Code, tests and release packaging done; live upload waits on user inputs (see TODO) |
+
+## Follow-up — readable passwords, full re-test, clean hand-over state (2026-10-27)
+- **Passwords:** Faizan and Kabir have new four-word passphrases (word-word-word-word-NN + symbol), set with
+  `staff:create --password`. They're given to the user in chat, not stored in the repo.
+- **Full re-test:** every admin and website feature passed in real Chrome. Details are in TEST_STATUS.
+- **Fixes:**
+  - The login-screen buttons (sign in, 2FA, forgot, reset) were still hard-coded blue; they're now brand red like every other primary button.
+  - The `content:reset` message now names the kept account's real role.
+- **Local data cleaned:**
+  - backup in `storage/app/backups/2026-10-27_before_clean.sql`;
+  - ran `content:reset --keep-admin=faizan@urbangoodsguide.com`, then recreated Kabir;
+  - set the site name, support email and SEO title in the admin.
+  - The local DB now holds only these 2 accounts and no content. The old admin@couponfollow.com is gone.
+- couponhub.devonlinetestserver.com was not touched (user's instruction).
+
+## Follow-up — rebrand to Urban Goods Guide, super admin, SMTP (2026-10-26)
+Client sent the new brand (`DownloadsFF`: logo, favicon, palette red #EA0728, yellow #FFE003, blue #0AA9E8, black).
+- **Brand:** the name is now "Urban Goods Guide" in code defaults, `.env.example`, deploy templates, both frontends and
+  the local DB settings (General + SEO, changed through the admin UI). Logo, white-wordmark variant, favicons, app icons and
+  og-image were generated from the client files into both `public/` folders.
+- **Website colours** (`src/index.css` tokens): ink is black, marigold is the brand yellow (black text only), `deal` is a
+  deep brand blue (#0877AD, white text 4.9:1), `sky` is the bright blue, `brand-red` drives `.btn-primary`, and
+  `raspberry` (#C2001D) is used for small red text. Header and footer use the image logo.
+  Fix: `.prose-body a` no longer overrides button-styled links (the Contact email button had blue text on red).
+- **Admin colours:** Tailwind's `blue-*` scale is remapped to the brand blue in `@theme`; primary buttons, toggles,
+  active nav and charts are brand red (`bg-brand`); sidebar and sign-in panel are black with the logo.
+- **Roles:** new `super_admin` (`AppEnumsRole::SuperAdmin`). It passes every `role:` check (`EnsureRole`), and
+  only a super admin may create, change, switch off, re-invite or reset two-step login for a super admin. The last
+  active super admin can't be demoted. `isAdmin()` covers both. AdminSeeder now creates the first account as super admin.
+  Admin UI: `owner` permission, Super Admin option only for super admins, no row menu on super admin rows for admins.
+- **`php artisan staff:create {email} --role= --name= [--password=] [--invite]`** creates or updates a verified staff
+  account; it prints a generated password once, or emails a set-password link.
+- **SMTP:** info@urbangoodsguide.com on SiteGround. `MAIL_HOST=urbangoodsguide.com` (the certificate does not cover
+  `mail.`), port 465, smtps. Configured in the local `.env` and verified with real sends (test mail, staff invite, reset link).
+- **Local accounts:** faizan@urbangoodsguide.com (super admin) and kabir@urbangoodsguide.com (admin), created with
+  `staff:create`. admin@couponfollow.com still exists locally.
 
 ## Follow-up — hand-over clean: no demo data, admin only (2026-10-17)
 Client's final requirement: the live site starts empty, with only the admin account.

@@ -47,7 +47,7 @@ class ContentResetTest extends TestCase
         $this->assertSame(0, Setting::count());
         $this->assertSame([], Storage::disk('public')->allFiles());
 
-        $this->getJson('/api/v1/public/settings')->assertOk()->assertJsonPath('data.site_name', 'Coupon Follow');
+        $this->getJson('/api/v1/public/settings')->assertOk()->assertJsonPath('data.site_name', 'Urban Goods Guide');
         $this->postJson('/api/v1/auth/login', ['email' => 'owner@shop.test', 'password' => 'Str0ngPass!'])->assertOk();
     }
 

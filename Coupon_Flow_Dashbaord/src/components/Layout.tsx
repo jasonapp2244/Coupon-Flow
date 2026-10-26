@@ -183,15 +183,10 @@ export default function Layout({ children }: { children: ReactNode }) {
   const sidebarContent = (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className={`flex items-center gap-2.5 px-4 h-14 border-b border-white/10 flex-shrink-0 ${collapsed ? 'justify-center' : ''}`}>
-        <div className="w-7 h-7 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/40">
-          <Tag size={13} className="text-white" />
-        </div>
-        {!collapsed && (
-          <div className="min-w-0">
-            <span className="font-bold text-white text-sm tracking-tight">Coupon Follow</span>
-          </div>
-        )}
+      <div className={`flex items-center px-4 h-14 border-b border-white/10 flex-shrink-0 ${collapsed ? 'justify-center px-2' : ''}`}>
+        {collapsed
+          ? <img src="favicon-light.png" alt="Urban Goods Guide" width={64} height={64} className="w-8 h-8" />
+          : <img src="logo-light.png" alt="Urban Goods Guide" width={409} height={160} className="h-10 w-auto" />}
       </div>
 
       <nav className="flex-1 overflow-y-auto py-3 px-2">
@@ -207,7 +202,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                 onClick={() => item.path && go(item.path)}
                 title={collapsed ? item.label : undefined}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-0.5
-                  ${isActive ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:bg-white/10 hover:text-white'}
+                  ${isActive ? 'bg-brand text-white shadow-sm' : 'text-slate-400 hover:bg-white/10 hover:text-white'}
                   ${collapsed ? 'justify-center' : ''}`}
               >
                 {item.icon}
@@ -240,7 +235,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                       key={child.label}
                       onClick={() => go(child.path)}
                       className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs font-medium transition-colors
-                        ${pathname === child.path ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:bg-white/10 hover:text-white'}`}
+                        ${pathname === child.path ? 'bg-brand text-white shadow-sm' : 'text-slate-400 hover:bg-white/10 hover:text-white'}`}
                     >
                       {child.icon}
                       {child.label}
@@ -268,7 +263,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-screen overflow-hidden bg-slate-100">
       {/* Desktop Sidebar */}
-      <aside className={`hidden lg:flex flex-col flex-shrink-0 transition-all duration-200 bg-[#0D1117] ${collapsed ? 'w-[60px]' : 'w-56'}`}>
+      <aside className={`hidden lg:flex flex-col flex-shrink-0 transition-all duration-200 bg-black ${collapsed ? 'w-[60px]' : 'w-56'}`}>
         {sidebarContent}
       </aside>
 
@@ -276,7 +271,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       {mobileOpen && (
         <div className="fixed inset-0 z-50 flex lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
-          <aside className="relative w-56 bg-[#0D1117] flex flex-col h-full">
+          <aside className="relative w-56 bg-black flex flex-col h-full">
             {sidebarContent}
           </aside>
         </div>
@@ -394,9 +389,9 @@ export default function Layout({ children }: { children: ReactNode }) {
               {helpOpen && (
                 <div className="absolute right-0 top-10 w-64 bg-white rounded-xl border border-slate-200 shadow-lg z-40 p-4">
                   <h3 className="font-semibold text-slate-800 text-sm mb-2">Need help?</h3>
-                  <p className="text-xs text-slate-500 mb-3">Contact support for assistance with the Coupon Follow admin dashboard.</p>
-                  <a href="mailto:support@couponfollow.com" className="block text-xs text-blue-600 hover:underline py-1">Contact Support</a>
-                  <a href="mailto:support@couponfollow.com?subject=Bug%20report" className="block text-xs text-blue-600 hover:underline py-1">Report a Bug</a>
+                  <p className="text-xs text-slate-500 mb-3">Contact support for assistance with the Urban Goods Guide admin dashboard.</p>
+                  <a href="mailto:info@urbangoodsguide.com" className="block text-xs text-blue-600 hover:underline py-1">Contact Support</a>
+                  <a href="mailto:info@urbangoodsguide.com?subject=Bug%20report" className="block text-xs text-blue-600 hover:underline py-1">Report a Bug</a>
                   <button onClick={() => setHelpOpen(false)} aria-label="Close" className="absolute top-3 right-3 text-slate-400 hover:text-slate-600"><X size={14} /></button>
                 </div>
               )}
@@ -460,7 +455,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         onConfirm={async () => { setSigningOut(true); await logout(); }}
         loading={signingOut}
         title="Sign out?"
-        message="Are you sure you want to sign out of Coupon Follow?"
+        message="Are you sure you want to sign out of Urban Goods Guide?"
         confirmLabel="Sign Out"
       />
     </div>

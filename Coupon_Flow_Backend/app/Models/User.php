@@ -52,12 +52,18 @@ class User extends Authenticatable
         ];
     }
 
+    /** Admin or super admin. */
     public function isAdmin(): bool
     {
-        return $this->role === Role::Admin;
+        return in_array($this->role, Role::admins(), true);
     }
 
-    /** Admin, editor or viewer: may sign in to the admin dashboard. */
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === Role::SuperAdmin;
+    }
+
+    /** Super admin, admin, editor or viewer: may sign in to the admin dashboard. */
     public function isStaff(): bool
     {
         return $this->role->isStaff();

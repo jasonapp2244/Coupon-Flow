@@ -22,7 +22,7 @@ use Throwable;
 
 /**
  * Imports a brand's coupons from its feed (JSON or CSV at a URL) or an uploaded CSV, in the
- * "Coupon Follow feed v1" format (see FORMAT below and the admin's Brand Feeds page).
+ * "Urban Goods Guide feed v1" format (see FORMAT below and the admin's Brand Feeds page).
  *
  * Coupons are matched by (source, external_id): new ones are added (as Draft unless the source
  * auto-publishes), changed ones are updated, and ones an admin edited since the last import are
@@ -306,7 +306,7 @@ class FeedImporter
 
         $response = Http::timeout(20)->connectTimeout(10)
             ->withOptions(['allow_redirects' => false])
-            ->withHeaders(['Accept' => 'application/json, text/csv;q=0.9, */*;q=0.5', 'User-Agent' => 'CouponFollow-FeedImporter/1.0'])
+            ->withHeaders(['Accept' => 'application/json, text/csv;q=0.9, */*;q=0.5', 'User-Agent' => 'UrbanGoodsGuide-FeedImporter/1.0'])
             ->when(filled($source->api_key), fn ($http) => $http->withToken($source->api_key))
             ->get($url);
 

@@ -23,7 +23,7 @@ class DemoSeeder extends Seeder
 {
     public function run(): void
     {
-        $admin = User::where('role', Role::Admin)->firstOrFail();
+        $admin = User::whereIn('role', Role::admins())->firstOrFail();
         $storeCategories = $this->categories(CategoryType::Store, ['E-Commerce', 'Fashion', 'Retail', 'Marketplace', 'Electronics', 'Beauty', 'Travel', 'Food']);
         $blogCategories = $this->categories(CategoryType::Blog, ['Deals', 'Fashion', 'Tips', 'Electronics', 'Beauty']);
 

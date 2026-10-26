@@ -1,4 +1,4 @@
-# Coupon Follow Admin — Apache config for SiteGround (copied into dist/ by Vite).
+# Urban Goods Guide Admin — Apache config for SiteGround (copied into dist/ by Vite).
 # Works from the domain root or any subfolder: rules are relative to this directory.
 
 Options -Indexes

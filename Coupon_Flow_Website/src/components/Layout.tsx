@@ -9,22 +9,20 @@ import CouponRevealModal from './CouponRevealModal';
 import { StoreLogo } from './States';
 import type { Category, SearchResults } from '../lib/types';
 
+/** The brand logo; on dark bands the black wordmark is swapped for a white one. */
 function Logo({ dark = false }: { dark?: boolean }) {
   const { site_name } = useSite();
   return (
-    <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label={`${site_name} home`}>
-      <span className={`flex h-8 w-11 -rotate-6 overflow-hidden rounded-md ring-2 ${dark ? 'ring-white' : 'ring-ink'}`} aria-hidden="true">
-        <span className="w-7 bg-marigold" />
-        <span className={`w-4 border-l-2 border-dashed ${dark ? 'border-white bg-ink-deep' : 'border-ink bg-white'}`} />
-      </span>
-      <span className="font-display text-xl font-extrabold tracking-tight">{site_name}</span>
+    <Link to="/" className="flex shrink-0 items-center" aria-label={`${site_name} home`}>
+      <img src={dark ? '/logo-light.png' : '/logo.png'} alt={site_name} width={409} height={160}
+        className={dark ? 'h-14 w-auto' : 'h-11 w-auto'} />
     </Link>
   );
 }
 
-/** Active page: a short marigold bar under the link, like a ticket's tab. */
+/** Active page: a short brand-red bar under the link, like a ticket's tab. */
 const navLink = ({ isActive }: { isActive: boolean }) =>
-  `relative rounded-md px-3 py-2 text-sm font-semibold transition-colors after:absolute after:inset-x-3 after:-bottom-[13px] after:h-[3px] after:rounded-full ${isActive ? 'text-ink after:bg-marigold' : 'text-ink-soft hover:text-ink after:bg-transparent'}`;
+  `relative rounded-md px-3 py-2 text-sm font-semibold transition-colors after:absolute after:inset-x-3 after:-bottom-[13px] after:h-[3px] after:rounded-full ${isActive ? 'text-ink after:bg-brand-red' : 'text-ink-soft hover:text-ink after:bg-transparent'}`;
 
 /** Closes a popover on outside click and on Escape (returning focus to its trigger). */
 function useDismiss(open: boolean, close: () => void, box: RefObject<HTMLElement | null>, trigger?: RefObject<HTMLElement | null>) {

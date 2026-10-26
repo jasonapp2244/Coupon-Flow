@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
- * Admin-only: who can sign in to the admin and what they may do. New staff set their own
+ * Admin-only (super admin accounts are managed by super admins): who can sign in to the admin and what they may do. New staff set their own
  * password from an emailed link; nobody types another person's password.
  */
 class StaffController extends Controller
@@ -34,6 +34,7 @@ class StaffController extends Controller
             'email' => ['required', 'email', 'max:190', Rule::unique('users', 'email')],
             'role' => ['required', Rule::in(array_map(fn (Role $r) => $r->value, Role::staff()))],
         ]);
+        $this->guardSuperAdmin($request, Role::from($data['role']));
 
         $user = new User(['name' => $data['name'], 'email' => $data['email'], 'password' => Str::password(40)]);
         // The admin vouches for the address, and the set-password link proves it anyway.
@@ -53,12 +54,22 @@ class StaffController extends Controller
             'role' => ['sometimes', Rule::in(array_map(fn (Role $r) => $r->value, Role::staff()))],
             'disabled' => ['sometimes', 'boolean'],
         ]);
+        $this->guardSuperAdmin($request, $staff->role);
+        if (isset($data['role'])) {
+            $this->guardSuperAdmin($request, Role::from($data['role']));
+        }
 
-        $losesAdmin = (isset($data['role']) && $data['role'] !== Role::Admin->value) || ($data['disabled'] ?? false);
-        if ($staff->isAdmin() && $losesAdmin) {
+        $newRole = isset($data['role']) ? Role::from($data['role']) : $staff->role;
+        $disabling = (bool) ($data['disabled'] ?? false);
+        if ($staff->isAdmin() && (! in_array($newRole, Role::admins(), true) || $disabling)) {
             abort_if($staff->is($request->user()), 422, "You can't remove your own admin access. Ask another admin.");
-            $otherAdmins = User::where('role', Role::Admin)->whereNull('disabled_at')->whereKeyNot($staff->id)->exists();
+            $otherAdmins = User::whereIn('role', Role::admins())->whereNull('disabled_at')->whereKeyNot($staff->id)->exists();
             abort_unless($otherAdmins, 422, 'This is the last active admin. Make someone else an admin first.');
+        }
+        if ($staff->isSuperAdmin() && ($newRole !== Role::SuperAdmin || $disabling)) {
+            abort_if($staff->is($request->user()), 422, "You can't remove your own super admin access. Ask another super admin.");
+            $others = User::where('role', Role::SuperAdmin)->whereNull('disabled_at')->whereKeyNot($staff->id)->exists();
+            abort_unless($others, 422, 'This is the last active super admin. Make someone else a super admin first.');
         }
         abort_if(($data['disabled'] ?? false) && $staff->is($request->user()), 422, "You can't switch off your own account.");
 
@@ -93,9 +104,10 @@ class StaffController extends Controller
         return response()->json(['data' => $this->present($staff)]);
     }
 
-    public function resendInvite(User $staff): JsonResponse
+    public function resendInvite(Request $request, User $staff): JsonResponse
     {
         abort_unless($staff->isStaff(), 404);
+        $this->guardSuperAdmin($request, $staff->role);
         abort_if($staff->isDisabled(), 422, 'Turn this account back on before sending a link.');
 
         $sent = $this->sendInvite($staff);
@@ -106,15 +118,22 @@ class StaffController extends Controller
     }
 
     /** For a lost phone: turns the person's two-step login off so they can set it up again. */
-    public function resetTwoFactor(User $staff, TwoFactor $twoFactor): JsonResponse
+    public function resetTwoFactor(Request $request, User $staff, TwoFactor $twoFactor): JsonResponse
     {
         abort_unless($staff->isStaff(), 404);
+        $this->guardSuperAdmin($request, $staff->role);
 
         $twoFactor->disable($staff);
         $staff->tokens()->delete();
         Audit::log('two_factor_reset', $staff, label: $staff->email);
 
         return response()->json(['data' => $this->present($staff)]);
+    }
+
+    /** Only a super admin may create, change or act on a super admin account. */
+    private function guardSuperAdmin(Request $request, Role $role): void
+    {
+        abort_if($role === Role::SuperAdmin && ! $request->user()->isSuperAdmin(), 403, 'Only a super admin can manage super admin accounts.');
     }
 
     private function sendInvite(User $user): bool

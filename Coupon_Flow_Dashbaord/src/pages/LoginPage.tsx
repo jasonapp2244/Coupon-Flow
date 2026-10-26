@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
-import { Eye, EyeOff, ArrowRight, ShieldCheck, TrendingUp, Tag, Store, ShoppingCart } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, ShieldCheck, TrendingUp, Store, ShoppingCart } from 'lucide-react';
 import { api, ApiError, clearToken, setToken } from '../lib/api';
 import { isStaff } from '../lib/permissions';
 import type { User } from '../lib/types';
@@ -13,11 +13,11 @@ interface LoginPageProps {
 
 // ─── Floating visual card components ────────────────────────────────────────
 
-function FeatureCard({ icon: Icon, title, text, color }: { icon: typeof Tag; title: string; text: string; color: string }) {
+function FeatureCard({ icon: Icon, title, text, color }: { icon: typeof Store; title: string; text: string; color: string }) {
   return (
     <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 flex items-center gap-3">
       <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center flex-shrink-0`}>
-        <Icon size={14} className="text-white" />
+        <Icon size={14} />
       </div>
       <div className="min-w-0">
         <p className="text-white text-sm font-semibold leading-tight">{title}</p>
@@ -93,7 +93,7 @@ function LoginForm({ onLogin, onForgot }: { onLogin: (user: User) => void; onFor
     <form onSubmit={handleSubmit} noValidate className="w-full max-w-sm mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-slate-900">Welcome Back</h1>
-        <p className="text-slate-500 text-sm mt-1.5">Sign in to your Coupon Follow dashboard.</p>
+        <p className="text-slate-500 text-sm mt-1.5">Sign in to your Urban Goods Guide dashboard.</p>
       </div>
 
       {credError && (
@@ -158,7 +158,7 @@ function LoginForm({ onLogin, onForgot }: { onLogin: (user: User) => void; onFor
       <button
         type="submit"
         disabled={loading}
-        className="mt-6 w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl transition-all shadow-sm shadow-blue-200"
+        className="mt-6 w-full flex items-center justify-center gap-2 px-6 py-3 bg-brand hover:bg-brand-dark active:bg-brand-dark disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl transition-all shadow-sm shadow-blue-200"
       >
         {loading ? (
           <>
@@ -175,7 +175,7 @@ function LoginForm({ onLogin, onForgot }: { onLogin: (user: User) => void; onFor
 
       <p className="mt-6 text-center text-xs text-slate-400">
         Need help accessing your account?{' '}
-        <a href="mailto:support@couponfollow.com" className="text-blue-600 hover:underline font-medium">Contact Support</a>
+        <a href="mailto:info@urbangoodsguide.com" className="text-blue-600 hover:underline font-medium">Contact Support</a>
       </p>
     </form>
   );
@@ -237,7 +237,7 @@ function TwoFactorStep({ challenge, onSignedIn, onRestart, onBack }: {
       />
 
       <button type="submit" disabled={loading || (!useRecovery && value.length !== 6) || (useRecovery && !value.trim())}
-        className="mt-6 w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl transition-all shadow-sm shadow-blue-200">
+        className="mt-6 w-full flex items-center justify-center gap-2 px-6 py-3 bg-brand hover:bg-brand-dark disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl transition-all shadow-sm shadow-blue-200">
         {loading ? 'Checking…' : <>Verify <ArrowRight size={15} /></>}
       </button>
 
@@ -309,7 +309,7 @@ function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
           <button
             type="submit"
             disabled={loading}
-            className="mt-5 w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl transition-all"
+            className="mt-5 w-full flex items-center justify-center gap-2 px-6 py-3 bg-brand hover:bg-brand-dark disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl transition-all"
           >
             {loading ? 'Sending…' : 'Send Reset Link'}
           </button>
@@ -365,7 +365,7 @@ function ResetPasswordForm({ token, email, onBack }: { token: string; email: str
           </div>
           <h2 className="text-xl font-bold text-slate-900">Password updated</h2>
           <p className="text-slate-500 text-sm mt-2">Your password has been updated successfully.</p>
-          <button onClick={onBack} className="mt-6 w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-xl transition-all">
+          <button onClick={onBack} className="mt-6 w-full px-6 py-3 bg-brand hover:bg-brand-dark text-white font-semibold text-sm rounded-xl transition-all">
             Back to Login
           </button>
         </div>
@@ -423,7 +423,7 @@ function ResetPasswordForm({ token, email, onBack }: { token: string; email: str
           <button
             type="submit"
             disabled={loading}
-            className="mt-6 w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl transition-all"
+            className="mt-6 w-full flex items-center justify-center gap-2 px-6 py-3 bg-brand hover:bg-brand-dark disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl transition-all"
           >
             {loading ? 'Updating…' : 'Update Password'}
           </button>
@@ -440,7 +440,7 @@ function ResetPasswordForm({ token, email, onBack }: { token: string; email: str
 
 function BrandPanel() {
   return (
-    <div className="hidden lg:flex flex-col flex-1 bg-gradient-to-br from-[#0D1117] via-[#111827] to-[#1E2A3A] p-10 relative overflow-hidden">
+    <div className="hidden lg:flex flex-col flex-1 bg-black p-10 relative overflow-hidden">
       {/* Subtle grid */}
       <div className="absolute inset-0 opacity-[0.04]" style={{
         backgroundImage: 'linear-gradient(rgba(255,255,255,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.8) 1px, transparent 1px)',
@@ -448,22 +448,19 @@ function BrandPanel() {
       }} />
 
       {/* Soft glows */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 right-0 w-80 h-80 bg-indigo-600/15 rounded-full blur-3xl translate-x-1/4 translate-y-1/4" />
+      <div className="absolute top-0 left-0 w-96 h-96 bg-brand/25 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute bottom-0 right-0 w-80 h-80 bg-brand-blue/20 rounded-full blur-3xl translate-x-1/4 translate-y-1/4" />
 
       {/* Logo */}
-      <div className="relative flex items-center gap-2.5 mb-auto">
-        <div className="w-9 h-9 bg-blue-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/30">
-          <Tag size={16} className="text-white" />
-        </div>
-        <span className="text-white font-bold text-lg tracking-tight">Coupon Follow</span>
+      <div className="relative mb-auto">
+        <img src="logo-light.png" alt="Urban Goods Guide" width={409} height={160} className="h-16 w-auto" />
       </div>
 
       {/* Headline */}
       <div className="relative mt-auto mb-10">
         <h2 className="text-4xl font-bold text-white leading-tight tracking-tight">
           Manage Every Deal.<br />
-          <span className="text-blue-400">Track Every Conversion.</span>
+          <span className="text-brand-yellow">Track Every Conversion.</span>
         </h2>
         <p className="text-white/50 text-base mt-4 leading-relaxed max-w-xs">
           Control your stores, coupons, redemptions and performance from one powerful platform.
@@ -472,9 +469,9 @@ function BrandPanel() {
 
       {/* What the dashboard does */}
       <div className="relative space-y-3">
-        <FeatureCard icon={Store} title="Stores and coupons" text="Add stores, codes and deals; they go live on the website." color="bg-amber-500/80" />
-        <FeatureCard icon={TrendingUp} title="Every use counted" text="Each code reveal and store visit is tracked per store and coupon." color="bg-blue-600" />
-        <FeatureCard icon={ShoppingCart} title="Sales and profit" text="Confirm sales from your affiliate reports and see the commission." color="bg-emerald-600" />
+        <FeatureCard icon={Store} title="Stores and coupons" text="Add stores, codes and deals; they go live on the website." color="bg-brand-yellow text-black" />
+        <FeatureCard icon={TrendingUp} title="Every use counted" text="Each code reveal and store visit is tracked per store and coupon." color="bg-brand-blue text-black" />
+        <FeatureCard icon={ShoppingCart} title="Sales and profit" text="Confirm sales from your affiliate reports and see the commission." color="bg-brand text-white" />
       </div>
     </div>
   );
@@ -506,11 +503,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       {/* Right panel */}
       <div className="flex-1 lg:max-w-[460px] flex flex-col">
         {/* Mobile logo */}
-        <div className="lg:hidden flex items-center gap-2.5 px-8 py-6 border-b border-slate-200 bg-white">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <Tag size={14} className="text-white" />
-          </div>
-          <span className="font-bold text-slate-900 text-base">Coupon Follow</span>
+        <div className="lg:hidden flex items-center px-8 py-5 border-b border-slate-200 bg-white">
+          <img src="logo.png" alt="Urban Goods Guide" width={409} height={160} className="h-11 w-auto" />
         </div>
 
         <div className="flex-1 flex items-center justify-center px-8 py-10 bg-white lg:border-l lg:border-slate-200">

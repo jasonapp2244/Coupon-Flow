@@ -80,7 +80,7 @@ function SeoSettings({ initial }: { initial: Settings['seo'] }) {
       <h2 className={cardTitle}>SEO Settings</h2>
       <div className="space-y-4">
         <div>
-          <Input label="Default Meta Title" placeholder="Coupon Follow — Best Coupons & Deals" value={values.meta_title} onChange={v => setValues(s => ({ ...s, meta_title: v }))} />
+          <Input label="Default Meta Title" placeholder="Urban Goods Guide — Best Coupons & Deals" value={values.meta_title} onChange={v => setValues(s => ({ ...s, meta_title: v }))} />
           <FieldError message={errors.meta_title} />
         </div>
         <div>

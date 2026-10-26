@@ -58,7 +58,7 @@ export default function CouponsPage() {
     <>
       <PageHeader title={heading} intro={<span aria-live="polite">{data ? `${data.meta.total.toLocaleString('en-US')} live ${data.meta.total === 1 ? 'coupon' : 'coupons'} and deals. Click one to open the store and see the code.` : 'Loading coupons'}</span>} />
       <div className="page py-8">
-        <div className="sticky top-16 z-20 -mx-4 flex flex-col gap-3 border-b border-line bg-paper/95 px-4 py-4 backdrop-blur sm:mx-0 sm:rounded-2xl sm:border-0 sm:bg-card sm:p-4 sm:shadow-[0_8px_24px_-16px_rgb(27_36_48/0.35)] sm:ring-1 sm:ring-line">
+        <div className="sticky top-16 z-20 -mx-4 flex flex-col gap-3 border-b border-line bg-paper/95 px-4 py-4 backdrop-blur sm:mx-0 sm:rounded-2xl sm:border-0 sm:bg-card sm:p-4 sm:shadow-[0_8px_24px_-16px_rgb(0_0_0/0.35)] sm:ring-1 sm:ring-line">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <input value={text} onChange={e => setText(e.target.value)} placeholder="Search by store or offer" aria-label="Search coupons" className="field lg:max-w-sm" />
             <select value={category} onChange={e => update({ category: e.target.value })} aria-label="Category" className="field lg:w-52">

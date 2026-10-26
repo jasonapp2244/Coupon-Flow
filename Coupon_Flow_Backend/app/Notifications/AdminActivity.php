@@ -23,7 +23,7 @@ class AdminActivity extends Notification
     public static function broadcast(string $text, ?string $emailSwitch = null): void
     {
         // Admins and editors run the catalogue; viewers only read reports.
-        $admins = User::whereIn('role', [Role::Admin, Role::Editor])->whereNull('disabled_at')->get();
+        $admins = User::whereIn('role', [Role::SuperAdmin, Role::Admin, Role::Editor])->whereNull('disabled_at')->get();
         NotificationFacade::send($admins, new self($text));
 
         $settings = app(SiteSettings::class);

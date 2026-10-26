@@ -190,7 +190,7 @@ export default function HomePage() {
           <ul className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {topStores.map(s => (
               <li key={s.id}>
-                <Link to={`/stores/${s.slug}`} className="group flex h-full flex-col items-center gap-3 rounded-2xl bg-card px-3 py-5 text-center ring-1 ring-line transition hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-14px_rgb(27_36_48/0.3)] hover:ring-ink">
+                <Link to={`/stores/${s.slug}`} className="group flex h-full flex-col items-center gap-3 rounded-2xl bg-card px-3 py-5 text-center ring-1 ring-line transition hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-14px_rgb(0_0_0/0.3)] hover:ring-ink">
                   <StoreLogo name={s.name} url={s.logo_url} size="lg" />
                   <span className="w-full">
                     <span className="block truncate font-semibold">{s.name}</span>

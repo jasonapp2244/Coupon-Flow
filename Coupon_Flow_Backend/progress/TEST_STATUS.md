@@ -1,6 +1,61 @@
 # Test Status
 
-_Last run: 2026-10-17_
+_Last run: 2026-10-27_
+
+## Full re-test + clean (2026-10-27)
+- `php artisan test`: 138 passed. Admin and website `tsc --noEmit` are clean.
+- Browser (real Chrome, Playwright; scripts in the session scratchpad `e2e/`):
+  - **Admin as super admin, 28 steps:**
+    - categories: create and rename;
+    - store: create with logo/URLs/commission/SEO, edit, view, copy link, duplicate, delete, restore, delete permanently;
+    - coupons: code, deal, code list with a per-visitor limit, usage limit, ended window in Ended Coupons, CSV upload (header, BOM and duplicates skipped), disable/enable;
+    - blog: with image and article markup; publish, unpublish, publish again;
+    - brand feed: CSV source, template import, Sync History;
+    - homepage slide: with image, reorder, save;
+    - notifications and security settings;
+    - dashboard and analytics charts, the bell, and the activity log (all labels readable).
+  - **Admin part 2:**
+    - Confirm sale with a profit preview ($100 at 10% gives $10.00);
+    - add an editor and a viewer (real SMTP invites);
+    - change role, switch off/on, resend link (the 429 throttle within a minute is intended);
+    - editor: can write the catalogue, but Settings, Staff and Activity are blocked;
+    - viewer: read-only;
+    - reset link sets a new password, which signs in;
+    - My Account: name and password changed, then changed back.
+  - **Kabir (admin):** 8/8. **Two-step login:** 4/4.
+  - **Website flows:** 16/16:
+    - hero slide;
+    - an ended coupon is hidden;
+    - code reveal with a new tab to /api/go, pop-up and copy;
+    - deal click-out;
+    - code list: next code, then the daily limit;
+    - usage limit: "1 left", then gone;
+    - rating;
+    - /promotions/at alias;
+    - blog article markup;
+    - search;
+    - stores and categories;
+    - contact email button;
+    - /cart redirects to /;
+    - 404.
+  - **Website sweep:** 157/157 (16 pages × desktop and mobile, contrast AA).
+  - **After the clean:** the empty admin and website render with no errors, the empty-state texts show, and Staff lists only Faizan (Super Admin) and Kabir (Admin).
+
+## Rebrand + super admin (2026-10-26)
+- `php artisan test`: **138 passed (923 assertions)**; new in `StaffRolesTest`: super admin passes every check, only a super
+  admin manages super admins, last super admin protected, `staff:create` (password + invite). `route:list`: 96 routes.
+- Admin and website `tsc --noEmit` clean; `build-release.sh` built api/admin/website zips for urbangoodsguide.com.
+- Browser (real Chrome via Playwright, scripts in the session scratchpad `e2e/`):
+  - super admin suite 38/40, and both failures were in the test script: the role label sits in a closed menu, and the coupon list was checked before it loaded (the coupon was saved).
+    It covers sign-in, a wrong password, brand colours, General/SEO settings saved, every one of 23 admin pages with no console or HTTP errors,
+    creating a store and a coupon, and the staff roles.
+  - admin (kabir) suite 8/8: admin pages, no actions on the super admin row, no Super Admin option, API 403 when
+    switching off the super admin, real invite email and real reset email through SMTP.
+  - two-step login 4/4: turn on, code asked at sign-in, code signs in, turn off.
+  - website 157/157 at 1366 and 375 wide: 16 pages, the logo in the header and footer, no old name, no broken images,
+    no sideways scroll, **WCAG AA text contrast on every page**, favicons, title, code reveal (new tab + pop-up), rating,
+    search suggestions, mobile menu.
+- All E2E data was removed afterwards. That covers the store, 2 coupons, 2 clicks, 1 rating, the test viewer account, its reset token, 9 notifications and 4 activity rows.
 
 ## Hand-over clean (2026-10-17)
 - `php artisan test`: 130 passed (874 assertions), incl. new `ContentResetTest` (3 tests).

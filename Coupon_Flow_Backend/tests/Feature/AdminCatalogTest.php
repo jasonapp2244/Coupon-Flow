@@ -170,7 +170,7 @@ class AdminCatalogTest extends TestCase
         $this->getJson('/api/v1/admin/settings')->assertJsonPath('data.general.site_name', 'Deal Desk');
 
         $log = ActivityLog::where('action', 'settings_updated')->sole();
-        $this->assertSame(['site_name' => ['Coupon Follow', 'Deal Desk']], $log->changes);
+        $this->assertSame(['site_name' => ['Urban Goods Guide', 'Deal Desk']], $log->changes);
         $this->assertSame('General settings', $log->subject_label);
 
         $this->putJson('/api/v1/admin/settings/unknown', [])->assertNotFound();

@@ -1,4 +1,4 @@
-# Deploying Coupon Follow to SiteGround
+# Deploying Urban Goods Guide to SiteGround
 
 Three parts, three addresses (examples):
 
@@ -8,12 +8,19 @@ Three parts, three addresses (examples):
 | Admin dashboard | `https://admin.example.com` | `~/www/admin.example.com/public_html` |
 | Public website | `https://example.com` | `~/www/example.com/public_html` |
 
+For urbangoodsguide.com (hosted on SiteGround): `api.urbangoodsguide.com`, `admin.urbangoodsguide.com`
+and `urbangoodsguide.com`. Build with
+`API_URL=https://api.urbangoodsguide.com SITE_URL=https://urbangoodsguide.com bash deploy/build-release.sh`.
+
 The website must be at a domain root (it uses real paths like `/stores/nike`). The admin works from
 any folder or subdomain.
 
 ## 0. Before you start
 - A mailbox the API sends from, e.g. `noreply@example.com` (Site Tools > Email > Accounts). It sends
-  staff invitations, password-reset links and admin alerts.
+  staff invitations, password-reset links and admin alerts. Urban Goods Guide uses
+  `info@urbangoodsguide.com`: `MAIL_HOST=urbangoodsguide.com` (not `mail.…`: the certificate only covers the
+  bare domain), port 465, `MAIL_SCHEME=smtps`, the mailbox password in `MAIL_PASSWORD` (quoted). Verified
+  sending on 2026-10-26.
 - PHP 8.2 or newer for the API site (Site Tools > Devs > PHP Manager).
 
 ## 1. Build the uploads (on your computer)
@@ -45,8 +52,19 @@ and redirects to the merchant, so merchant links never appear on the site.
    php artisan storage:link
    php artisan config:cache && php artisan route:cache
    ```
-   This only creates the admin account. (A plain `db:seed` does the same in production: the demo
-   catalogue is skipped when `APP_ENV=production`.)
+   This only creates the first account, as **super admin**. (A plain `db:seed` does the same in production:
+   the demo catalogue is skipped when `APP_ENV=production`.)
+   Then create (or update) the staff accounts; without `--password` a strong password is printed once,
+   and `--invite` emails a set-password link instead:
+   ```bash
+   php artisan staff:create faizan@urbangoodsguide.com --name="Faizan" --role=super_admin
+   php artisan staff:create kabir@urbangoodsguide.com --name="Kabir" --role=admin
+   ```
+   Roles: **super_admin** (everything, and the only role that can add or change super admins),
+   **admin** (everything else: settings, staff, activity log), **editor** (catalogue), **viewer** (read-only).
+   Moving an existing install with demo data to an empty hand-over state:
+   `php artisan content:reset --keep-admin=faizan@urbangoodsguide.com --force` (back up the database first;
+   it removes every other account too, so run `staff:create` for the others afterwards).
 5. Cron (Site Tools > Devs > Cron Jobs), every minute:
    ```
    /usr/local/bin/php /home/<user>/www/api.example.com/app/artisan schedule:run >> /dev/null 2>&1
@@ -76,7 +94,8 @@ and redirects to the merchant, so merchant links never appear on the site.
    so search engines see them too.
 
 ## 5. First login and settings
-1. Sign in at `https://admin.example.com` with `ADMIN_EMAIL` / `ADMIN_PASSWORD`, then under
+1. Sign in at `https://admin.example.com` with `ADMIN_EMAIL` / `ADMIN_PASSWORD` (or the super admin from
+   `staff:create`), then under
    Settings > My Account change the password and **turn on two-step login** (authenticator app;
    save the recovery codes somewhere safe).
 2. Settings > General: site name, **support email** (shown on the Contact page)

@@ -7,17 +7,21 @@ import { FieldError } from '../components/FormParts';
 import { api, ApiError } from '../lib/api';
 import { useApi } from '../lib/hooks';
 import { dateTime } from '../lib/format';
-import { ROLE_LABELS } from '../lib/permissions';
+import { allows, ROLE_LABELS } from '../lib/permissions';
 import { useApp } from '../store/AppContext';
 import type { StaffMember, StaffRole } from '../lib/types';
 
 const ROLES = Object.keys(ROLE_LABELS) as StaffRole[];
 
+const ROLE_BADGE: Record<StaffRole, 'purple' | 'info' | 'neutral'> = { super_admin: 'purple', admin: 'info', editor: 'neutral', viewer: 'neutral' };
+
 function RolePicker({ value, onChange }: { value: StaffRole; onChange: (role: StaffRole) => void }) {
+  // Only a super admin may hand out the super admin role (the API enforces the same rule).
+  const owner = allows(useApp().user.role, 'owner');
   return (
     <fieldset className="space-y-2">
       <legend className="text-sm font-medium text-slate-700 mb-1.5">Role</legend>
-      {ROLES.map(role => (
+      {ROLES.filter(role => owner || role !== 'super_admin').map(role => (
         <label key={role} className={`flex cursor-pointer gap-3 rounded-lg border px-3 py-2.5 ${value === role ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'}`}>
           <input type="radio" name="staff-role" value={role} checked={value === role} onChange={() => onChange(role)} className="mt-0.5 accent-blue-600" />
           <span>
@@ -123,7 +127,7 @@ export default function StaffPage() {
                     <div className="font-medium text-slate-800">{m.name}{m.id === user.id && <span className="ml-1.5 text-xs font-normal text-slate-400">(you)</span>}</div>
                     <div className="text-xs text-slate-400">{m.email}</div>
                   </td>
-                  <td className="px-4 py-3.5"><Badge variant={m.role === 'admin' ? 'purple' : m.role === 'editor' ? 'info' : 'neutral'}>{ROLE_LABELS[m.role].label}</Badge></td>
+                  <td className="px-4 py-3.5"><Badge variant={ROLE_BADGE[m.role]}>{ROLE_LABELS[m.role].label}</Badge></td>
                   <td className="px-4 py-3.5">
                     {m.two_factor
                       ? <span className="inline-flex items-center gap-1 text-xs text-emerald-700"><ShieldCheck size={13} /> On</span>
@@ -132,7 +136,7 @@ export default function StaffPage() {
                   <td className="px-4 py-3.5 text-xs text-slate-500">{m.last_login_at ? dateTime(m.last_login_at) : 'Never'}</td>
                   <td className="px-4 py-3.5">{m.disabled ? <Badge variant="danger">Switched off</Badge> : <Badge variant="success">Active</Badge>}</td>
                   <td className="px-4 py-3.5 text-right">
-                    <RowMenu open={openMenu === m.id} onToggle={() => setOpenMenu(openMenu === m.id ? null : m.id)} width="w-56">
+                    {(m.role !== 'super_admin' || allows(user.role, 'owner')) && <RowMenu open={openMenu === m.id} onToggle={() => setOpenMenu(openMenu === m.id ? null : m.id)} width="w-56">
                       <RowMenuItem icon={<Users size={13} />} onClick={() => { setRoleFor(m); setNewRole(m.role); setOpenMenu(null); }}>Change role</RowMenuItem>
                       {!m.disabled && <RowMenuItem icon={<Mail size={13} />} onClick={() => { setPending({ member: m, action: 'invite' }); setOpenMenu(null); }}>Send set-password link</RowMenuItem>}
                       {m.two_factor && <RowMenuItem icon={<ShieldOff size={13} />} onClick={() => { setPending({ member: m, action: 'reset2fa' }); setOpenMenu(null); }}>Reset two-step login</RowMenuItem>}
@@ -143,7 +147,7 @@ export default function StaffPage() {
                             : <RowMenuItem danger icon={<UserX size={13} />} onClick={() => { setPending({ member: m, action: 'disable' }); setOpenMenu(null); }}>Switch off</RowMenuItem>}
                         </div>
                       )}
-                    </RowMenu>
+                    </RowMenu>}
                   </td>
                 </tr>
               ))}

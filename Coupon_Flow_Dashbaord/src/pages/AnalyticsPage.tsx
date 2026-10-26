@@ -14,7 +14,7 @@ import type { AnalyticsData, StoreProfit } from '../lib/types';
 const RANGES = [{ label: '7 Days', days: 7 }, { label: '30 Days', days: 30 }, { label: '3 Months', days: 90 }, { label: '12 Months', days: 365 }];
 
 const selectClass = 'px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg outline-none text-slate-600 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all';
-const tooltipStyle = { background: '#0F172A', border: 'none', borderRadius: 8, color: '#F1F5F9', fontSize: 12 };
+const tooltipStyle = { background: '#000000', border: 'none', borderRadius: 8, color: '#F1F5F9', fontSize: 12 };
 const shortDate = (d: string) => date(d).replace(/, \d{4}$/, '');
 
 function Kpis({ items, range }: { items: { label: string; value: string }[]; range: string }) {
@@ -55,15 +55,15 @@ function UsesView({ data, range }: { data: AnalyticsData; range: string }) {
             <AreaChart data={rows} margin={{ top: 4, right: 16, left: -8, bottom: 0 }}>
               <defs>
                 <linearGradient id="usesAnalyticsGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#2563EB" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#EA0728" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#EA0728" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
               <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} minTickGap={24} />
               <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip contentStyle={tooltipStyle} formatter={tooltipNumber} />
-              <Area type="monotone" dataKey="uses" name="Uses" stroke="#2563EB" strokeWidth={2} fill="url(#usesAnalyticsGrad)" dot={false} />
+              <Area type="monotone" dataKey="uses" name="Uses" stroke="#EA0728" strokeWidth={2} fill="url(#usesAnalyticsGrad)" dot={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>

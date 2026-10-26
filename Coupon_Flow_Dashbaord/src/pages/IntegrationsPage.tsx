@@ -25,7 +25,7 @@ const FREQUENCY_LABELS: Record<FeedSource['frequency'], string> = {
   manual: 'Only when run by hand',
 };
 
-/** The columns of "Coupon Follow feed v1", for the format guide. */
+/** The columns of "Urban Goods Guide feed v1", for the format guide. */
 const FORMAT: [string, boolean, string][] = [
   ['external_id', true, "The brand's own id for the coupon. Used to update it next time."],
   ['store', true, 'Store name or slug, e.g. "The Loaded Tea Shop". Optional if the source has a default store.'],

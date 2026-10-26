@@ -1,4 +1,4 @@
-// Thin client for the Coupon Follow Laravel API (Sanctum bearer tokens).
+// Thin client for the Urban Goods Guide Laravel API (Sanctum bearer tokens).
 
 // Production builds must set VITE_API_URL (vite.config.ts refuses to build without it).
 const BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:8000/api/v1').replace(/\/$/, '');

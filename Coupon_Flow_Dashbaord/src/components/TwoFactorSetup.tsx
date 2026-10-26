@@ -20,7 +20,7 @@ function RecoveryCodes({ codes, onDone }: { codes: string[]; onDone: () => void 
     try { await navigator.clipboard.writeText(text); setCopied(true); } catch { /* the codes stay on screen to copy by hand */ }
   };
   const download = () => {
-    const url = URL.createObjectURL(new Blob([`Coupon Follow admin recovery codes\nEach code works once.\n\n${text}\n`], { type: 'text/plain' }));
+    const url = URL.createObjectURL(new Blob([`Urban Goods Guide admin recovery codes\nEach code works once.\n\n${text}\n`], { type: 'text/plain' }));
     const a = document.createElement('a');
     a.href = url;
     a.download = 'coupon-follow-recovery-codes.txt';

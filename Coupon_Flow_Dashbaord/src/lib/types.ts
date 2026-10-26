@@ -21,7 +21,7 @@ export interface Paginated<T> {
   meta: PageMeta;
 }
 
-export type StaffRole = 'admin' | 'editor' | 'viewer';
+export type StaffRole = 'super_admin' | 'admin' | 'editor' | 'viewer';
 
 export interface User {
   id: number;

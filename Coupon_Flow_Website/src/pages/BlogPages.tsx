@@ -65,7 +65,7 @@ function PostMeta({ blog, className = '' }: { blog: Blog; className?: string }) 
 
 export function BlogCard({ blog }: { blog: Blog }) {
   return (
-    <Link to={`/blog/${blog.slug}`} className="group flex h-full flex-col overflow-hidden rounded-2xl bg-card ring-1 ring-line transition hover:-translate-y-1 hover:shadow-[0_18px_40px_-20px_rgb(27_36_48/0.4)] hover:ring-ink">
+    <Link to={`/blog/${blog.slug}`} className="group flex h-full flex-col overflow-hidden rounded-2xl bg-card ring-1 ring-line transition hover:-translate-y-1 hover:shadow-[0_18px_40px_-20px_rgb(0_0_0/0.4)] hover:ring-ink">
       <span className="block overflow-hidden"><BlogCover blog={blog} /></span>
       <div className="flex flex-1 flex-col p-5">
         <PostMeta blog={blog} />
@@ -82,7 +82,7 @@ export function BlogCard({ blog }: { blog: Blog }) {
 /** The lead story at the top of the blog: a wide card with a big cover. */
 function FeaturedPost({ blog }: { blog: Blog }) {
   return (
-    <Link to={`/blog/${blog.slug}`} className="group grid overflow-hidden rounded-3xl bg-card ring-1 ring-line transition hover:shadow-[0_24px_50px_-24px_rgb(27_36_48/0.45)] hover:ring-ink lg:grid-cols-[1.15fr_1fr]">
+    <Link to={`/blog/${blog.slug}`} className="group grid overflow-hidden rounded-3xl bg-card ring-1 ring-line transition hover:shadow-[0_24px_50px_-24px_rgb(0_0_0/0.45)] hover:ring-ink lg:grid-cols-[1.15fr_1fr]">
       <span className="block overflow-hidden"><BlogCover blog={blog} large className="aspect-[16/10] h-full" /></span>
       <div className="flex flex-col justify-center p-6 sm:p-10">
         <p className="flex items-center gap-2 text-sm font-semibold text-deal-dark">Featured guide</p>

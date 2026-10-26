@@ -12,7 +12,7 @@ import type { AnalyticsData, CouponUsage, DashboardData } from '../lib/types';
 
 const RANGES = [{ label: '7 Days', days: 7 }, { label: '30 Days', days: 30 }, { label: '3 Months', days: 90 }];
 
-const tooltipStyle = { background: '#0F172A', border: 'none', borderRadius: 8, color: '#F1F5F9', fontSize: 12 };
+const tooltipStyle = { background: '#000000', border: 'none', borderRadius: 8, color: '#F1F5F9', fontSize: 12 };
 const shortDate = (d: string) => date(d).replace(/, \d{4}$/, '');
 
 function Kpi({ label, value, hint, icon, color, onClick, alert = false }: {
@@ -62,15 +62,15 @@ function UsesChart() {
           <AreaChart data={rows} margin={{ top: 0, right: 16, left: -8, bottom: 0 }}>
             <defs>
               <linearGradient id="usesGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#2563EB" stopOpacity={0.15} />
-                <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
+                <stop offset="5%" stopColor="#EA0728" stopOpacity={0.15} />
+                <stop offset="95%" stopColor="#EA0728" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
             <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} minTickGap={24} />
             <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} allowDecimals={false} />
             <Tooltip contentStyle={tooltipStyle} formatter={tooltipNumber} />
-            <Area type="monotone" dataKey="uses" name="Uses" stroke="#2563EB" strokeWidth={2} fill="url(#usesGrad)" dot={false} activeDot={{ r: 4, fill: '#2563EB' }} />
+            <Area type="monotone" dataKey="uses" name="Uses" stroke="#EA0728" strokeWidth={2} fill="url(#usesGrad)" dot={false} activeDot={{ r: 4, fill: '#EA0728' }} />
           </AreaChart>
         </ResponsiveContainer>
       </div>

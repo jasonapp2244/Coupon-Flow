@@ -40,7 +40,7 @@ export function Toggle({ checked, onChange, label, ariaLabel }: { checked: boole
     <button type="button" role="switch" aria-checked={checked} aria-label={label ? undefined : ariaLabel}
       onClick={() => onChange(!checked)}
       className="flex items-center gap-2 cursor-pointer select-none rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500">
-      <span className={`relative block w-9 h-5 rounded-full transition-colors duration-200 ${checked ? 'bg-blue-600' : 'bg-slate-200'}`}>
+      <span className={`relative block w-9 h-5 rounded-full transition-colors duration-200 ${checked ? 'bg-brand' : 'bg-slate-200'}`}>
         <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${checked ? 'translate-x-4' : ''}`} />
       </span>
       {label && <span className="text-sm text-slate-600">{label}</span>}
@@ -51,7 +51,7 @@ export function Toggle({ checked, onChange, label, ariaLabel }: { checked: boole
 // Button
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
 const btnStyles: Record<ButtonVariant, string> = {
-  primary: 'bg-blue-600 hover:bg-blue-700 text-white border-transparent shadow-sm',
+  primary: 'bg-brand hover:bg-brand-dark text-white border-transparent shadow-sm',
   secondary: 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200',
   ghost: 'bg-transparent hover:bg-slate-100 text-slate-600 border-transparent',
   danger: 'bg-red-600 hover:bg-red-700 text-white border-transparent shadow-sm',

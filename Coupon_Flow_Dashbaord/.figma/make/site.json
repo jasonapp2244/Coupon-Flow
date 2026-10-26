@@ -1,8 +1,8 @@
 {
-  "title": "Coupon Follow Admin",
-  "description": "Coupon Follow admin dashboard for managing stores, coupons, blogs, vendor sync and redemptions.",
+  "title": "Urban Goods Guide Admin",
+  "description": "Urban Goods Guide admin dashboard for managing stores, coupons, blogs, vendor sync and redemptions.",
   "icons": {
-    "icon": "./favicon.svg"
+    "icon": "./favicon.png"
   },
   "robots": {
     "index": false

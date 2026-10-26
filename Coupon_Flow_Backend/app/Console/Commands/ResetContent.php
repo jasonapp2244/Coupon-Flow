@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
@@ -35,7 +34,7 @@ class ResetContent extends Command
         $email = trim((string) $this->option('keep-admin'));
         $admin = $email === '' ? null : User::where('email', $email)->first();
 
-        if (! $admin || $admin->role !== Role::Admin) {
+        if (! $admin || ! $admin->isAdmin()) {
             $this->error("--keep-admin must be the email of an existing admin account ({$email} is not).");
 
             return self::FAILURE;
@@ -72,7 +71,7 @@ class ResetContent extends Command
             $this->line(sprintf('  %-24s %d removed', $table, $count));
         }
         $this->line(sprintf('  %-24s %d removed', 'uploaded files', $files - ($disk->exists('.gitignore') ? 1 : 0)));
-        $this->info("Content reset. The only account left is {$admin->email} (admin).");
+        $this->info("Content reset. The only account left is {$admin->email} ({$admin->role->label()}).");
 
         return self::SUCCESS;
     }

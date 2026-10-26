@@ -191,7 +191,7 @@ export function StoreLogo({ name, url, size = 'md' }: { name: string; url: strin
 export function StoreCard({ store }: { store: Store }) {
   const count = store.coupons_count ?? 0;
   return (
-    <Link to={`/stores/${store.slug}`} className="group flex h-full items-center gap-4 rounded-2xl bg-card p-4 ring-1 ring-line transition hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-14px_rgb(27_36_48/0.3)] hover:ring-ink">
+    <Link to={`/stores/${store.slug}`} className="group flex h-full items-center gap-4 rounded-2xl bg-card p-4 ring-1 ring-line transition hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-14px_rgb(0_0_0/0.3)] hover:ring-ink">
       <StoreLogo name={store.name} url={store.logo_url} />
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">

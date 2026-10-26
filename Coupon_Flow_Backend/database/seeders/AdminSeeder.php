@@ -7,7 +7,7 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 
 /**
- * Production-safe: creates (or resets the password of) the first admin account only.
+ * Production-safe: creates (or resets the password of) the first account only, as super admin.
  * Run on the server with: php artisan db:seed --class=AdminSeeder --force
  */
 class AdminSeeder extends Seeder
@@ -22,6 +22,6 @@ class AdminSeeder extends Seeder
         }
 
         $admin = User::firstOrNew(['email' => $email]);
-        $admin->forceFill(['name' => 'Admin', 'password' => $password, 'role' => Role::Admin, 'email_verified_at' => now()])->save();
+        $admin->forceFill(['name' => 'Admin', 'password' => $password, 'role' => Role::SuperAdmin, 'email_verified_at' => now()])->save();
     }
 }

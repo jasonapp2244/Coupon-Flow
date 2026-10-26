@@ -1,5 +1,12 @@
 # Deployment Status
 
+## 2026-10-26 — Urban Goods Guide release ready (not deployed)
+- `deploy/release/api.zip` (7.8 MB), `admin.zip`, `website.zip` were built for `API_URL=https://api.urbangoodsguide.com`,
+  `SITE_URL=https://urbangoodsguide.com` (SiteGround layout in DEPLOY.md). Rebuild if other addresses are used.
+- No new migrations. New command `staff:create`. Live `.env` needs the mail keys from `env.production.example` plus the
+  mailbox password, and `APP_NAME="Urban Goods Guide"` (that change signs everyone out once).
+- The user deploys; nothing was uploaded or pushed from this session.
+
 | Target | Status |
 |---|---|
 | Backend API | Local only (`php artisan serve` on 8000, MariaDB `coupon_follow`). Not deployed. |

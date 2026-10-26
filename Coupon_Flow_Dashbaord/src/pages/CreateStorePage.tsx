@@ -140,7 +140,7 @@ function StoreForm({ store }: { store: Store | null }) {
       <Card>
         <h2 className="text-sm font-semibold text-slate-800 mb-4 pb-3 border-b border-slate-100">SEO</h2>
         <div className="space-y-4">
-          <Input label="Meta Title" placeholder="Best Amazon Coupons & Deals 2026 | Coupon Follow" value={metaTitle} onChange={setMetaTitle} />
+          <Input label="Meta Title" placeholder="Best Amazon Coupons & Deals 2026 | Urban Goods Guide" value={metaTitle} onChange={setMetaTitle} />
           <Textarea label="Meta Description" placeholder="Find the latest Amazon promo codes and deals..." rows={3} value={metaDescription} onChange={setMetaDescription} />
           <Input label="Meta Keywords" placeholder="amazon coupons, amazon deals, amazon promo codes" value={metaKeywords} onChange={setMetaKeywords} />
         </div>

@@ -1,4 +1,4 @@
-# Coupon Follow public site: Apache config for SiteGround (copied into dist/ by Vite).
+# Urban Goods Guide public site: Apache config for SiteGround (copied into dist/ by Vite).
 Options -Indexes
 
 <IfModule mod_rewrite.c>

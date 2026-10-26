@@ -83,7 +83,7 @@ export default function CouponTicket({ coupon, showStore = true }: { coupon: Cou
 
   return (
     <article id={`${REVEAL_HASH_PREFIX}${coupon.id}`}
-      className="group flex scroll-mt-24 overflow-hidden rounded-2xl bg-card shadow-[0_1px_0_var(--color-line)] ring-1 ring-line transition-shadow hover:shadow-[0_10px_30px_-12px_rgb(27_36_48/0.25)] max-sm:flex-col">
+      className="group flex scroll-mt-24 overflow-hidden rounded-2xl bg-card shadow-[0_1px_0_var(--color-line)] ring-1 ring-line transition-shadow hover:shadow-[0_10px_30px_-12px_rgb(0_0_0/0.25)] max-sm:flex-col">
       <button onClick={open} tabIndex={-1} aria-hidden="true" className="flex sm:w-36">
         <TicketStub coupon={coupon} row className="w-full" />
       </button>

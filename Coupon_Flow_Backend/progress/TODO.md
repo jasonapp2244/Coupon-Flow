@@ -1,9 +1,18 @@
 # TODO
 
 ## Blocked on user
+- [ ] Deploy the 2026-10-26 rebrand (user deploys). SiteGround (urbangoodsguide.com): upload `deploy/release/*.zip`, live
+      `.env` mail keys + `MAIL_PASSWORD` (quoted), `php artisan migrate --force`, then
+      `php artisan staff:create faizan@urbangoodsguide.com --name="Faizan" --role=super_admin` and
+      `php artisan staff:create kabir@urbangoodsguide.com --name="Kabir" --role=admin`. On CloudPanel instead: push, then the
+      same two `staff:create` commands (after `--reset-content` if the demo data should go).
+- [ ] Confirm the staff emails: faizan@ / kabir@ were assumed to be @urbangoodsguide.com.
+- [ ] Do NOT touch couponhub.devonlinetestserver.com until the user says so (instruction 2026-10-27).
+- [ ] Rebuild + re-upload website.zip once the live API answers (prerender/sitemap were skipped in the 2026-10-26 build).
+- [x] Local DB cleaned to Faizan + Kabir only (2026-10-27; backup storage/app/backups/2026-10-27_before_clean.sql).
+- [ ] Change the SMTP mailbox password: it was pasted into chat.
 - [ ] Live hand-over reset: run on the server `cd /root/coupon-follow-src && git fetch -q origin main && git reset -q --hard origin/main && bash Coupon_Flow_Backend/deploy/cloudpanel/git-deploy.sh couponhub.devonlinetestserver.com main --reset-content`, then verify live (0 stores, admin sign-in).
 - [ ] Let's Encrypt certificate for couponhub.devonlinetestserver.com is still self-signed.
-- [ ] Commit the 2026-10-17 pre-deploy fixes (row menus, commission preview, activity labels, 1 new test) before building the release zips.
 - [ ] Decide whether to delete the 57 old "E2E Test…" admin notifications left by the 2026-10-16 test run. They weren't removed, because they weren't from this run.
 - [ ] Minor: All Coupons should re-read `?state=` / `?near=` when only the query changes on the same page.
 - [x] Commit the end-to-end test fixes + responsive changes (committed and pushed to main 2026-10-16).
@@ -22,8 +31,8 @@
 - [ ] Client to confirm: a "use" = a "Show coupon code" / "Get deal" click (we can't see purchases at the brand's checkout).
 - [ ] Production domains for API, admin and public site (needed for `.env` and builds).
 - [ ] SiteGround access (SSH or SFTP) or the user uploads the zips; MySQL DB name/user/password.
-- [ ] Mailbox + SMTP password (staff invites, reset links, alerts); support email to show on the site.
-- [ ] Final admin password; brand name decision ("Coupon Follow" matches an existing site; the name is a setting).
+- [x] Mailbox + SMTP: info@urbangoodsguide.com, verified 2026-10-26; support email set to it in Settings.
+- [x] Brand name: Urban Goods Guide (2026-10-26).
 - [ ] Have the legal pages (Terms, Privacy, Affiliate) reviewed; they are sensible templates, not legal advice.
 
 ## Phase 4/5 — go-live

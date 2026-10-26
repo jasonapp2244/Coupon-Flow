@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploys Coupon Follow on a CloudPanel server straight from GitHub: pull → build → install/update.
+# Deploys Urban Goods Guide on a CloudPanel server straight from GitHub: pull → build → install/update.
 # API, admin (/admin) and website (/) on one domain, as in deploy/DEPLOY-CLOUDPANEL.md.
 #
 # Run as root:  bash git-deploy.sh <domain> [branch] [--reset-content]
